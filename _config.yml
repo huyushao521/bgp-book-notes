@@ -1,0 +1,23 @@
+title: BGP 路由协议排错指南
+description: 《Troubleshooting BGP》精读笔记
+lang: zh-CN
+url: https://huyushao521.github.io
+baseurl: /bgp-book-notes
+
+markdown: kramdown
+kramdown:
+  input: GFM
+  hard_wrap: false
+  auto_ids: false
+  syntax_highlighter: rouge
+
+defaults:
+  - scope:
+      path: "chapters"
+    values:
+      layout: default
+
+exclude:
+  - README.md
+  - Gemfile
+  - Gemfile.lock

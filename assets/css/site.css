@@ -1,0 +1,274 @@
+/* ---------- 基础 ---------- */
+* { box-sizing: border-box; }
+
+html { scroll-behavior: smooth; }
+
+body {
+  margin: 0;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC",
+               "Hiragino Sans GB", "Microsoft YaHei", "Source Han Sans SC", sans-serif;
+  font-size: 16px;
+  line-height: 1.8;
+  color: #1f2328;
+  background: #fff;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* ---------- 左侧栏 ---------- */
+.sidebar {
+  position: fixed;
+  top: 0; left: 0; bottom: 0;
+  width: 300px;
+  display: flex;
+  flex-direction: column;
+  background: #f6f8fa;
+  border-right: 1px solid #d8dee4;
+  overflow-y: auto;
+  z-index: 20;
+}
+
+.brand {
+  padding: 18px 18px 14px;
+  border-bottom: 1px solid #e5e9ee;
+}
+.brand a {
+  display: block;
+  font-size: 15px;
+  font-weight: 700;
+  color: #0969da;
+  text-decoration: none;
+  line-height: 1.4;
+}
+.brand a span {
+  display: block;
+  font-size: 12px;
+  font-weight: 400;
+  color: #6e7781;
+  margin-top: 2px;
+}
+
+.nav { padding: 10px 8px 40px; }
+
+/* 下拉分组 */
+.group {
+  margin-bottom: 2px;
+}
+.group > summary {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 7px 10px;
+  font-size: 13px;
+  font-weight: 600;
+  color: #57606a;
+  border-radius: 6px;
+  cursor: pointer;
+  user-select: none;
+  list-style: none;
+}
+.group > summary::-webkit-details-marker { display: none; }
+.group > summary::before {
+  content: "";
+  flex: none;
+  width: 0; height: 0;
+  border-left: 5px solid #8b949e;
+  border-top: 4px solid transparent;
+  border-bottom: 4px solid transparent;
+  transition: transform .15s ease;
+}
+.group[open] > summary::before { transform: rotate(90deg); }
+.group > summary:hover { background: #eaeef2; }
+
+.nav ul {
+  list-style: none;
+  margin: 0;
+  padding: 2px 0 6px 10px;
+}
+
+.nav li a {
+  display: block;
+  padding: 5px 10px;
+  font-size: 13.5px;
+  line-height: 1.5;
+  color: #24292f;
+  text-decoration: none;
+  border-radius: 6px;
+  border-left: 2px solid transparent;
+}
+.nav li a:hover { background: #eaeef2; }
+.nav li a.active {
+  background: #ddf4ff;
+  color: #0969da;
+  font-weight: 600;
+  border-left-color: #0969da;
+}
+
+.nav li.pending {
+  padding: 5px 10px;
+  font-size: 13.5px;
+  line-height: 1.5;
+  color: #9aa4ae;
+  border-left: 2px solid transparent;
+}
+
+/* 本页目录 */
+.toc li a { font-size: 13px; color: #424a53; }
+.toc li.lvl3 a { padding-left: 22px; font-size: 12.5px; color: #6e7781; }
+.toc li a.active { background: #eef6ff; color: #0969da; font-weight: 600; }
+
+/* ---------- 正文 ---------- */
+.main { margin-left: 300px; }
+
+.content {
+  max-width: 860px;
+  margin: 0 auto;
+  padding: 44px 40px 140px;
+}
+
+.content h1 {
+  font-size: 1.9em;
+  line-height: 1.35;
+  margin: 0 0 .6em;
+  padding-bottom: .35em;
+  border-bottom: 1px solid #d8dee4;
+  font-weight: 700;
+}
+
+.content h2 {
+  font-size: 1.4em;
+  line-height: 1.4;
+  margin: 2.2em 0 .7em;
+  padding-left: 12px;
+  border-left: 4px solid #0969da;
+  font-weight: 700;
+}
+
+.content h3 {
+  font-size: 1.15em;
+  margin: 1.8em 0 .6em;
+  color: #1f2328;
+  font-weight: 700;
+}
+
+.content h4 { font-size: 1em; margin: 1.4em 0 .5em; }
+
+.content h2, .content h3, .content h4 { scroll-margin-top: 24px; }
+
+.content p { margin: 0 0 1em; }
+
+.content a { color: #0969da; text-decoration: none; }
+.content a:hover { text-decoration: underline; }
+
+.content ul, .content ol { padding-left: 1.6em; margin: 0 0 1em; }
+.content li { margin: .3em 0; }
+
+.content strong { font-weight: 600; }
+
+.content blockquote {
+  margin: 1.2em 0;
+  padding: .6em 1em;
+  color: #57606a;
+  background: #f6f8fa;
+  border-left: 4px solid #d0d7de;
+  border-radius: 0 6px 6px 0;
+}
+.content blockquote p:last-child { margin-bottom: 0; }
+
+.content hr {
+  border: 0;
+  border-top: 1px solid #d8dee4;
+  margin: 2em 0;
+}
+
+/* 表格 */
+.content table {
+  display: block;
+  width: max-content;
+  max-width: 100%;
+  overflow-x: auto;
+  border-collapse: collapse;
+  margin: 1.2em 0;
+  font-size: 14.5px;
+}
+.content th, .content td {
+  border: 1px solid #d8dee4;
+  padding: 7px 12px;
+  text-align: left;
+  vertical-align: top;
+}
+.content th { background: #f6f8fa; font-weight: 600; }
+.content tbody tr:nth-child(even) { background: #fbfcfd; }
+
+/* 代码 */
+.content code {
+  font-family: ui-monospace, SFMono-Regular, "SF Mono", Consolas, "Liberation Mono", monospace;
+  font-size: .88em;
+  background: #eff1f3;
+  padding: 2px 5px;
+  border-radius: 4px;
+}
+.content pre {
+  background: #f6f8fa;
+  border: 1px solid #e5e9ee;
+  border-radius: 8px;
+  padding: 14px 16px;
+  overflow-x: auto;
+  margin: 1.2em 0;
+  line-height: 1.6;
+}
+.content pre code {
+  background: none;
+  padding: 0;
+  font-size: 13px;
+}
+
+/* 语法高亮（Rouge 基础配色） */
+.highlight .c, .highlight .c1, .highlight .cm { color: #6e7781; font-style: italic; }
+.highlight .k, .highlight .kd, .highlight .kn { color: #cf222e; }
+.highlight .s, .highlight .s1, .highlight .s2 { color: #0a3069; }
+.highlight .na, .highlight .nv { color: #953800; }
+.highlight .mi, .highlight .mf { color: #0550ae; }
+
+/* ---------- 移动端 ---------- */
+.nav-toggle-btn { display: none; }
+.backdrop { display: none; }
+
+@media (max-width: 900px) {
+  .sidebar {
+    transform: translateX(-100%);
+    transition: transform .22s ease;
+    box-shadow: 2px 0 12px rgba(0,0,0,.12);
+    width: 290px;
+  }
+  #nav-toggle:checked ~ .sidebar { transform: none; }
+
+  .nav-toggle-btn {
+    display: inline-flex;
+    align-items: center;
+    position: fixed;
+    top: 10px; left: 10px;
+    z-index: 50;
+    padding: 6px 12px;
+    font-size: 13px;
+    font-weight: 600;
+    color: #24292f;
+    background: #fff;
+    border: 1px solid #d8dee4;
+    border-radius: 6px;
+    cursor: pointer;
+    box-shadow: 0 1px 3px rgba(0,0,0,.06);
+  }
+
+  #nav-toggle:checked ~ .backdrop {
+    display: block;
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,.28);
+    z-index: 30;
+  }
+
+  .main { margin-left: 0; }
+  .content { padding: 60px 18px 100px; }
+  .content h1 { font-size: 1.6em; }
+  .content table { font-size: 13.5px; }
+}

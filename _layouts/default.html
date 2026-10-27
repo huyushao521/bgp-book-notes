@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{% if page.title %}{{ page.title }} · {% endif %}{{ site.title }}</title>
+<link rel="stylesheet" href="{{ '/assets/css/site.css' | relative_url }}">
+</head>
+<body>
+<input type="checkbox" id="nav-toggle" hidden>
+<label for="nav-toggle" class="nav-toggle-btn">☰ 目录</label>
+
+<aside class="sidebar">
+  <div class="brand">
+    <a href="{{ '/' | relative_url }}">BGP 排错指南<span>精读笔记</span></a>
+  </div>
+
+  <nav class="nav">
+    <details class="group" id="page-toc-group" open>
+      <summary>本页目录</summary>
+      <ul class="toc" id="toc-list"></ul>
+    </details>
+
+    <details class="group part" data-part="1" open>
+      <summary>第 1 部分 · BGP 基础</summary>
+      <ul>
+        <li><a href="{{ '/chapters/chapter-01-bgp-fundamentals.html' | relative_url }}" data-path="chapters/chapter-01-bgp-fundamentals.html">第 1 章 · BGP 基础</a></li>
+      </ul>
+    </details>
+
+    <details class="group part" data-part="2">
+      <summary>第 2 部分 · 一般 BGP 排错</summary>
+      <ul>
+        <li class="pending">第 2 章 · 通用的排错方法</li>
+        <li class="pending">第 3 章 · 排查对等体问题</li>
+        <li class="pending">第 4 章 · 路由通告和 BGP 策略</li>
+        <li class="pending">第 5 章 · BGP 收敛</li>
+      </ul>
+    </details>
+
+    <details class="group part" data-part="3">
+      <summary>第 3 部分 · BGP 可扩展性</summary>
+      <ul>
+        <li class="pending">第 6 章 · BGP 引起的平台问题</li>
+        <li class="pending">第 7 章 · BGP 的扩展</li>
+        <li class="pending">第 8 章 · BGP 边界架构</li>
+      </ul>
+    </details>
+
+    <details class="group part" data-part="4">
+      <summary>第 4 部分 · 保障 BGP 安全</summary>
+      <ul>
+        <li class="pending">第 9 章 · 保障 BGP 的安全</li>
+      </ul>
+    </details>
+
+    <details class="group part" data-part="5">
+      <summary>第 5 部分 · 多协议 BGP</summary>
+      <ul>
+        <li class="pending">第 10 章 · MPLS 三层 VPN</li>
+        <li class="pending">第 11 章 · MPLS L2VPN 服务的 BGP</li>
+        <li class="pending">第 12 章 · 服务提供商的 IPv6 BGP</li>
+        <li class="pending">第 13 章 · VXLAN BGP EVPN</li>
+      </ul>
+    </details>
+
+    <details class="group part" data-part="6">
+      <summary>第 6 部分 · 高可用性</summary>
+      <ul>
+        <li class="pending">第 14 章 · BGP 高可用性</li>
+      </ul>
+    </details>
+
+    <details class="group part" data-part="7">
+      <summary>第 7 部分 · 展望未来</summary>
+      <ul>
+        <li class="pending">第 15 章 · BGP 的增强特性</li>
+      </ul>
+    </details>
+  </nav>
+</aside>
+
+<label for="nav-toggle" class="backdrop"></label>
+
+<main class="main">
+  <article class="content">
+    {{ content }}
+  </article>
+</main>
+
+<script>
+(function () {
+  var content = document.querySelector('.content');
+  var here = location.pathname;
+  var siteTitle = document.title;
+
+  /* 当前章节高亮 + 展开所属分组 */
+  var active = null;
+  document.querySelectorAll('.nav a[data-path]').forEach(function (a) {
+    if (here.indexOf('/' + a.dataset.path) !== -1 || here.indexOf(a.dataset.path) !== -1) {
+      a.classList.add('active');
+      active = a;
+    }
+  });
+  if (active) {
+    var g = active.closest('details');
+    if (g) g.open = true;
+  }
+
+  /* 标题加锚点 id，生成左侧本页目录 */
+  var heads = content ? content.querySelectorAll('h2, h3') : [];
+  var tocList = document.getElementById('toc-list');
+  heads.forEach(function (h, i) {
+    h.id = 'sec-' + (i + 1);
+    var li = document.createElement('li');
+    li.className = h.tagName === 'H3' ? 'lvl3' : 'lvl2';
+    var a = document.createElement('a');
+    a.href = '#' + h.id;
+    a.textContent = h.textContent.trim();
+    li.appendChild(a);
+    tocList.appendChild(li);
+  });
+  if (!heads.length) {
+    var g = document.getElementById('page-toc-group');
+    if (g) g.remove();
+  }
+
+  /* 用 H1 作为页面标题 */
+  var h1 = content ? content.querySelector('h1') : null;
+  if (h1) document.title = h1.textContent.trim() + ' · ' + siteTitle;
+
+  /* 页面内目录滚动高亮 */
+  if (heads.length) {
+    var links = tocList.querySelectorAll('a');
+    var onScroll = function () {
+      var idx = 0;
+      heads.forEach(function (h, i) {
+        if (h.getBoundingClientRect().top <= 100) idx = i;
+      });
+      links.forEach(function (a, i) { a.classList.toggle('active', i === idx); });
+    };
+    window.addEventListener('scroll', onScroll, { passive: true });
+    onScroll();
+  }
+
+  /* 移动端点目录后自动收起 */
+  document.querySelectorAll('.nav a[data-path]').forEach(function (a) {
+    a.addEventListener('click', function () {
+      document.getElementById('nav-toggle').checked = false;
+    });
+  });
+})();
+</script>
+</body>
+</html>
