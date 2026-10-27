@@ -112,6 +112,13 @@ body {
 }
 
 /* 本页目录 */
+.toc {
+  max-height: 38vh;
+  overflow-y: auto;
+  scrollbar-width: thin;
+}
+.toc::-webkit-scrollbar { width: 6px; }
+.toc::-webkit-scrollbar-thumb { background: #d0d7de; border-radius: 3px; }
 .toc li a { font-size: 13px; color: #424a53; }
 .toc li.lvl3 a { padding-left: 22px; font-size: 12.5px; color: #6e7781; }
 .toc li a.active { background: #eef6ff; color: #0969da; font-weight: 600; }

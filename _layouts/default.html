@@ -92,7 +92,6 @@
 (function () {
   var content = document.querySelector('.content');
   var here = location.pathname;
-  var siteTitle = document.title;
 
   /* 当前章节高亮 + 展开所属分组 */
   var active = null;
@@ -124,10 +123,6 @@
     var g = document.getElementById('page-toc-group');
     if (g) g.remove();
   }
-
-  /* 用 H1 作为页面标题 */
-  var h1 = content ? content.querySelector('h1') : null;
-  if (h1) document.title = h1.textContent.trim() + ' · ' + siteTitle;
 
   /* 页面内目录滚动高亮 */
   if (heads.length) {
