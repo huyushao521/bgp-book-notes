@@ -6,14 +6,32 @@
 <title>{% if page.title %}{{ page.title }} · {% endif %}{{ site.title }}</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='6' fill='%230969da'/><text x='16' y='23' font-size='17' font-family='sans-serif' font-weight='bold' text-anchor='middle' fill='white'>B</text></svg>">
 <link rel="stylesheet" href="{{ '/assets/css/site.css' | relative_url }}">
+<script>
+/* 尽早写入主题，避免刷新时闪白 */
+(function () {
+  var saved = null;
+  try { saved = localStorage.getItem('bgp-theme'); } catch (e) {}
+  var dark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+  document.documentElement.setAttribute('data-theme', saved || (dark ? 'dark' : 'light'));
+})();
+</script>
 </head>
 <body>
 <input type="checkbox" id="nav-toggle" hidden>
 <label for="nav-toggle" class="nav-toggle-btn">☰ 目录</label>
 
+<button type="button" class="theme-toggle floating" data-theme-toggle aria-label="切换深色/浅色主题" title="切换深色/浅色主题">
+  <span class="theme-icon" aria-hidden="true">◐</span><span class="theme-text">深色</span>
+</button>
+
 <aside class="sidebar">
   <div class="brand">
-    <a href="{{ '/' | relative_url }}">BGP 排错指南<span>精读笔记</span></a>
+    <div class="brand-row">
+      <a href="{{ '/' | relative_url }}">BGP 排错指南<span>精读笔记</span></a>
+      <button type="button" class="theme-toggle" data-theme-toggle aria-label="切换深色/浅色主题" title="切换深色/浅色主题">
+        <span class="theme-icon" aria-hidden="true">◐</span><span class="theme-text">深色</span>
+      </button>
+    </div>
   </div>
 
   <nav class="nav">
@@ -145,6 +163,46 @@
       document.getElementById('nav-toggle').checked = false;
     });
   });
+
+  /* ---------- 主题切换 ---------- */
+  var root = document.documentElement;
+  var mq = window.matchMedia ? window.matchMedia('(prefers-color-scheme: dark)') : null;
+
+  function paintButtons(theme) {
+    var dark = theme === 'dark';
+    document.querySelectorAll('[data-theme-toggle]').forEach(function (btn) {
+      btn.querySelector('.theme-icon').textContent = dark ? '☀' : '☾';
+      btn.querySelector('.theme-text').textContent = dark ? '浅色' : '深色';
+      btn.setAttribute('aria-pressed', dark ? 'true' : 'false');
+      btn.title = dark ? '切换到浅色主题' : '切换到深色主题';
+    });
+  }
+
+  function applyTheme(theme) {
+    root.setAttribute('data-theme', theme);
+    paintButtons(theme);
+  }
+
+  paintButtons(root.getAttribute('data-theme') || 'light');
+
+  document.querySelectorAll('[data-theme-toggle]').forEach(function (btn) {
+    btn.addEventListener('click', function () {
+      var next = root.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+      applyTheme(next);
+      try { localStorage.setItem('bgp-theme', next); } catch (e) {}
+    });
+  });
+
+  /* 未手动选择时，跟随系统配色变化 */
+  if (mq) {
+    var onScheme = function (e) {
+      var saved = null;
+      try { saved = localStorage.getItem('bgp-theme'); } catch (err) {}
+      if (!saved) applyTheme(e.matches ? 'dark' : 'light');
+    };
+    if (mq.addEventListener) mq.addEventListener('change', onScheme);
+    else if (mq.addListener) mq.addListener(onScheme);
+  }
 })();
 </script>
 </body>
