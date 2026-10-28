@@ -17,7 +17,7 @@ title: 首页
 |----|------|------|
 | [第 1 章](chapters/chapter-01-bgp-fundamentals.md) | BGP 基础 | ✅ 已精读 |
 | [第 2 章](chapters/chapter-02-troubleshooting-methodology.md) | 通用的排错方法 | ✅ 已精读 |
-| 第 3 章 | 排查对等体问题 | 📋 待精读 |
+| [第 3 章](chapters/chapter-03-troubleshooting-peering.md) | 排查对等体问题 | ✅ 已精读 |
 | 第 4 章 | 路由通告和BGP策略的排错 | 📋 待精读 |
 | 第 5 章 | BGP收敛的排错 | 📋 待精读 |
 | 第 6 章 | 排查BGP引起的平台问题 | 📋 待精读 |
