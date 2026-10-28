@@ -539,4 +539,4 @@ neighbor 10.1.12.2 local-as 65100 [no-prepend [replace-as [dual-as]]]
 
 ---
 
-[← 返回首页](../README.md) | [第 2 章 →](chapter-02-troubleshooting-methodology.md)
+[← 返回首页](../) | [第 2 章 · 通用的排错方法 →](chapter-02-troubleshooting-methodology.md)
