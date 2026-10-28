@@ -1,6 +1,6 @@
 # 第 2 章 · 通用的排错方法
 
-> **本章涵盖**：结构化排错的四个固定动作；六大通用排错方法及其适用场景；如何判定控制平面还是数据平面故障；基线与变更管理；IOS / IOS XR / NX-OS 通用命令对照；ping、traceroute、debug、日志、抓包等工具的陷阱；向 TAC 求助前的信息准备。
+> **本章涵盖**：结构化排错的四个固定动作；六大通用排错方法及其适用场景；如何判定控制平面还是数据平面故障；基线与变更管理；IOS / IOS XR / NX-OS 通用命令对照；ping、traceroute、debug、日志、抓包等工具的陷阱；向 TAC 求助前的信息准备；**四个三平台（IOS / IOS XR / NX-OS）实战用例**。
 
 ---
 
@@ -319,6 +319,408 @@ show logging | include BGP
 
 ---
 
+## 2.9 三平台实战用例
+
+> 以下命令输出为**示意**（字段顺序与真实设备一致），IP / AS 见本节拓扑。三平台指 **IOS**、**IOS XR**、**NX-OS**。
+
+### 拓扑
+
+```
+        AS 65100                              AS 65200
+   R1 ───────────── R2 ────────────────── R3
+   Lo0 192.168.1.1/32   Lo0 192.168.2.2/32   10.1.23.3/24
+        Gi0/1 10.1.12.1/30   Gi0/2 10.1.23.2/30
+        └── IBGP（用 Lo0 建立）──┘   └── EBGP ──┘
+                                        通告 172.16.3.0/24
+```
+
+| 设备 | 平台 | 角色 |
+|------|------|------|
+| R1 | IOS | AS 65100 内部，IBGP 客户端 |
+| R2 | IOS XR | AS 65100 边界（ASBR） |
+| R3 | NX-OS | AS 65200，前缀源 |
+
+---
+
+### 用例 1：新建 EBGP 会话 Established，但一条路由都收不到
+
+**症状**：昨天新开 R2–R3 互联，邻居起来了，`PfxRcd` 一直是 0；R3 侧也看不到自己发出的前缀被接受。
+
+**步骤 1 — 确认会话状态（三平台）**
+
+```
+! R2 (IOS XR)
+show bgp ipv4 unicast summary
+Neighbor        Spk    AS MsgRcvd MsgSent   TblVer  InQ OutQ  Up/Down  St/PfxRcd
+10.1.23.3         0 65200      48      51        0    0    0 00:12:03          0
+```
+
+```
+! R3 (NX-OS)
+show bgp ipv4 unicast summary
+Neighbor        V    AS MsgRcvd MsgSent   TblVer  InQ OutQ Up/Down  State/PfxRcd
+10.1.23.2       4 65100      51      48        0    0    0 00:12:01          0
+```
+
+**判读**：两边 `St/PfxRcd` 都是 0，处理消息数在增长 → **TCP 与 OPEN 都正常**，问题在 UPDATE 层，属于控制面第 4 类故障（"优选但未通告"/"未收到"）。
+
+**步骤 2 — 看双方的策略与收发计数**
+
+```
+! R2 (IOS XR) —— 谁被拒绝，计数就在谁身上
+show bgp ipv4 unicast neighbors 10.1.23.3
+  BGP state = Established, up for 00:12:03
+  Last read 00:00:02, last write 00:00:11
+  Hold time is 90, keepalive interval is 30 seconds
+  ...
+  Prefixes Current:              0          0 (Accepted prefixes)
+  ...
+  Inbound route policy:   (not configured)
+  Outbound route policy:  (not configured)
+```
+
+```
+! R3 (NX-OS) —— 我到底发了没有？
+show bgp ipv4 unicast neighbors 10.1.23.2 advertised-routes
+! 输出为空（No advertised routes）
+```
+
+**根因**：R3 是 IOS XR。**XR 的 EBGP 邻居如果不显式关联 `route-policy`，入向 NLRI 会被丢弃、出向不通告任何 NLRI**——会话照样能建立，所以 summary 上完全看不出异常。R3 缺的就是这一条策略。
+
+**步骤 3 — 修复（XR 侧）**
+
+```
+route-policy PASS-ALL
+  pass
+end-policy
+!
+router bgp 65200
+ neighbor 10.1.23.2
+  remote-as 65100
+  address-family ipv4 unicast
+   route-policy PASS-ALL in
+   route-policy PASS-ALL out
+  !
+ !
+!
+```
+
+**对照写法（若对端是 IOS / NX-OS，同一件事的配置）**
+
+```
+! IOS：默认不限制，等价于"放行一切"
+router bgp 65200
+ address-family ipv4
+  neighbor 10.1.23.2 activate
+  neighbor 10.1.23.2 route-map PASS-ALL out
+!
+route-map PASS-ALL permit 10
+```
+
+```
+! NX-OS：必须显式 activate，但不需要默认策略
+router bgp 65200
+ address-family ipv4 unicast
+  neighbor 10.1.23.2 remote-as 65100
+   address-family ipv4 unicast
+```
+
+**步骤 4 — 验证（三平台一致）**
+
+```
+show bgp ipv4 unicast summary                 ! PfxRcd 应变为 1（172.16.3.0/24）
+show bgp ipv4 unicast 172.16.3.0/24           ! 本地 best 路径，下一跳 10.1.23.3
+show bgp ipv4 unicast neighbors 10.1.23.2 advertised-routes   ! R3 侧应能看到该前缀
+```
+
+> **教训**：三平台"默认策略"不同是跨厂商互通的第一大坑。IOS 默认全放行，XR 默认全拒绝且**静默**，NX-OS 需要显式 `activate`。新建跨厂商会话时，先把这张表记住。
+
+| 行为 | IOS | IOS XR | NX-OS |
+|------|-----|--------|-------|
+| 未配置策略时的入向 | 全接受 | **全丢弃** | 全接受 |
+| 未配置策略时的出向 | 全通告 | **全不通告** | 全通告 |
+| AFI 是否需要显式激活 | 默认激活 IPv4 | 需要 | 需要 |
+| 异常是否体现在 summary | 否 | **否（无告警）** | 否 |
+
+---
+
+### 用例 2：IBGP 路由在表里但不可用（下一跳不可达）
+
+**症状**：R2 从 EBGP 学到 `172.16.3.0/24` 且已最优，R1 的 BGP 表里也能看到这条路由，但 `*>` 变成了 `*`（无 `>`），实际转发不通。
+
+**步骤 1 — 三平台看"这条路由为什么没被优选"**
+
+```
+! R1 (IOS)
+show bgp ipv4 unicast 172.16.3.0/24
+BGP routing table entry for 172.16.3.0/24, version 12
+Paths: (1 available, no best path)
+  Not advertised to any peer
+  Refresh Epoch 1
+  65200
+    10.1.23.3 from 192.168.2.2 (192.168.2.2)
+      Origin IGP, metric 0, localpref 100, valid, internal
+      rx pathid: 0, tx pathid: 0
+```
+
+```
+! R1 (IOS CLI 等价判断)
+show ip bgp 172.16.3.0
+  *  172.16.3.0/24  10.1.23.3   0   100 0 65200 i
+                                        ↑ 前面没有 >，且无 best
+show ip route 10.1.23.3
+% Network not in table
+```
+
+```
+! R2 (IOS XR) —— 我发给邻居的下一跳是谁
+show bgp ipv4 unicast 172.16.3.0/24
+  Local label: 24040
+  10.1.23.3 from 10.1.23.3 (10.1.23.3)
+    Received Label 24041
+    Origin IGP, metric 0, localpref 100, valid, external, best
+```
+
+**判读**：R1 上 `show ip route 10.1.23.3` 无路由 → **下一跳不可达**，BGP 会做"下一跳可达性检查"，失败的路由不参与优选（`valid` 但无 best）。
+
+**根因**：R2 把从 EBGP 学来的路由转给 IBGP 邻居时，**默认不改变 NEXT_HOP**（EBGP 学到的下一跳是外部地址，AS 内部不可达）。这是 IBGP 排错中最常见的一条。
+
+**步骤 2 — 修复（三平台语法对比）**
+
+```
+! R2 (IOS XR)，在指向 R1 的 IBGP 邻居上开启
+router bgp 65100
+ neighbor 192.168.1.1
+  remote-as 65100
+  update-source Loopback0
+  address-family ipv4 unicast
+   next-hop-self
+  !
+ !
+!
+```
+
+```
+! IOS 等价配置
+router bgp 65100
+ neighbor 192.168.1.1 remote-as 65100
+ neighbor 192.168.1.1 update-source Loopback0
+ address-family ipv4
+  neighbor 192.168.1.1 activate
+  neighbor 192.168.1.1 next-hop-self
+```
+
+```
+! NX-OS 等价配置
+router bgp 65100
+ neighbor 192.168.1.1
+  remote-as 65100
+  update-source Loopback0
+  address-family ipv4 unicast
+   next-hop-self
+```
+
+**步骤 3 — 验证**
+
+```
+show bgp ipv4 unicast 172.16.3.0/24    ! 下一跳应变为 192.168.2.2，且出现 > 标记
+show ip route 172.16.3.0               ! 应出现 "B 172.16.3.0/24 [200/0] via 192.168.2.2"
+```
+
+> 若拓扑里 IBGP 邻居用的是**物理接口地址**而非 Lo0，下一跳可能本来就可达、不会复现此故障；这也是"配置比较法"能迅速定位的原因——拿一台正常的边界设备 diff 邻居配置即可。
+
+---
+
+### 用例 3：小包通、大包不通（数据平面 MTU 问题）
+
+**症状**：路由全对、BGP 会话 Established、`ping 10.1.23.3` 通，但业务 TCP 传输文件时卡死；BGP 偶尔因为 UPDATE 报文较大而 reset。
+
+**步骤 1 — 用分片禁止探测 MTU（三平台语法不同，这一组最常记错）**
+
+```
+! IOS
+ping 10.1.23.3 size 1472 df-bit repeat 5
+!!!!!
+Success rate is 100 percent (5/5), round-trip min/avg/max = 1/1/1 ms
+
+ping 10.1.23.3 size 1473 df-bit repeat 5
+.....
+Success rate is 0 percent (0/5)
+```
+
+```
+! IOS XR（size 含 IP 头 + 载荷；do-not-fragment 对应 df-bit）
+ping 10.1.23.3 size 1472 do-not-fragment count 5
+Type escape sequence to abort.
+!!!!!
+Success rate is 100 percent (5/5)
+```
+
+```
+! NX-OS（参数名是 packet-size，不是 size）
+ping 10.1.23.3 packet-size 1472 df-bit count 5
+5 packets transmitted, 5 packets received, 0.00% packet loss
+```
+
+**步骤 2 — 接口 MTU 与丢弃计数（三平台）**
+
+```
+! IOS
+show interfaces GigabitEthernet0/2 | include MTU|drops|output errors
+  MTU 1500 bytes, BW 1000000 Kbit/sec, DLY 10 usec,
+  0 output errors, 0 collisions, 0 interface resets
+  Total output drops: 0
+```
+
+```
+! IOS XR
+show interfaces GigabitEthernet0/0/0/2 | include "MTU|drops"
+  MTU 1500 bytes, BW 1000000 Kbit/sec
+  0 output drops, 0 output errors
+```
+
+```
+! NX-OS
+show interface Ethernet1/2 | include MTU|drops
+  MTU 1500 bytes, BW 1000000 Kbit, DLY 10 usec
+  0 output drops
+```
+
+**判读**：1472 字节能通、1473 不能通 → 路径 MTU 恰好 1500（1472 + 20 IP + 8 ICMP）。两端接口 MTU 一致，但**中间链路或隧道封装多占了字节**，导致 1500 字节报文在中间被丢弃。
+
+**步骤 3 — 修复（三平台接口 MTU 对比）**
+
+```
+! IOS
+interface GigabitEthernet0/2
+ mtu 1500
+ ip mtu 1500
+```
+
+```
+! IOS XR
+interface GigabitEthernet0/0/0/2
+ mtu 1500
+ ipv4 mtu 1500
+```
+
+```
+! NX-OS
+interface Ethernet1/2
+ mtu 1500
+```
+
+> 若是 MPLS 核心，注意 **1500 字节业务 + 标签栈** 会超过接口 MTU：核心接口通常要 1504/1508，或对业务侧做 MSS 调整（IOS：`ip tcp adjust-mss 1360`，其余平台命令名随版本不同，以实际命令树为准）。
+
+**步骤 4 — 验证**：`ping ... size 1472 df-bit` 与 `size 1500 df-bit` 均通；业务侧 TCP 大包不再卡顿。
+
+---
+
+### 用例 4：会话周期性 Down/Up（flapping）
+
+**症状**：邻居每天断 3～5 次，每次几秒后自动恢复；业务表现为路由短暂缺失。
+
+**步骤 1 — 三平台日志（同一事件，三种格式）**
+
+```
+! IOS
+%DUAL-5-NBRCHANGE: ...
+%BGP-5-ADJCHANGE: neighbor 10.1.23.3 Down BGP Notification sent
+%BGP-5-ADJCHANGE: neighbor 10.1.23.3 Up
+```
+
+```
+! IOS XR
+RP/0/RP0/CPU0:Oct 28 10:12:03.123 UTC: bgp[1051]: %ROUTING-BGP-5-ADJCHANGE : neighbor 10.1.23.3 Down - EOF received
+RP/0/RP0/CPU0:Oct 28 10:12:06.881 UTC: bgp[1051]: %ROUTING-BGP-5-ADJCHANGE : neighbor 10.1.23.3 Up
+```
+
+```
+! NX-OS
+2026 Oct 28 10:12:03 bgp-65100 [1234]: %BGP-5-ADJCHANGE: bgp-65100 [1234] (default) neighbor 10.1.23.3 Down - BGP Notification sent
+2026 Oct 28 10:12:06 bgp-65100 [1234]: %BGP-5-ADJCHANGE: bgp-65100 [1234] (default) neighbor 10.1.23.3 Up
+```
+
+**步骤 2 — 看"最后一次复位原因"，这是 flapping 的唯一硬证据**
+
+```
+! IOS
+show bgp ipv4 unicast neighbors 10.1.23.3 | include "BGP state|Last reset|hold time|Last read"
+  BGP state = Established, up for 00:00:12
+  Last read 00:00:02, last write 00:00:11, hold time is 90, keepalive interval is 30 seconds
+  Last reset 00:03:41 ago, due to Hold Timer Expired
+
+! IOS XR
+show bgp ipv4 unicast neighbors 10.1.23.3 | include "BGP state|Last reset"
+  BGP state = Established, up for 00:00:12
+  Last reset: 00:03:41, due to BGP Notification received
+
+! NX-OS
+show bgp ipv4 unicast neighbors 10.1.23.3 | include "BGP state|Last reset|hold time"
+  BGP state = Established, up for 00:00:12
+  Last reset by us 00:03:41, due to hold timer expired
+```
+
+**判读**：
+- `Hold Timer Expired` → 对端 90 秒内没收到你的 keepalive ⇒ **路径丢包或对端 CPU/CoPP 丢包**，不是策略问题
+- `BGP Notification received` → 对端主动发 Notification，去**对端**查日志与 max-prefix / capability 错误
+
+**步骤 3 — 临时缓解：调整 keepalive/hold（三平台）**
+
+```
+! IOS
+router bgp 65100
+ address-family ipv4
+  neighbor 10.1.23.3 timers 10 30
+```
+
+```
+! IOS XR（timers 在 address-family 下）
+router bgp 65100
+ neighbor 10.1.23.3
+  address-family ipv4 unicast
+   timers 10 30
+```
+
+```
+! NX-OS
+router bgp 65100
+ neighbor 10.1.23.3
+  address-family ipv4 unicast
+   timers 10 30
+```
+
+> ⚠️ 缩短 hold time 会让会话对丢包**更敏感**，只是把"90 秒发现"变成"30 秒发现"，属于掩盖症状。真根因要去查：接口 CRC/丢包计数、链路利用率、控制面 CPU、CoPP 是否限速过紧（BGP 属于 control-plane 流量）、以及是否被中间设备按会话老化。
+
+**步骤 4 — 长期治理**：把 `Up/Down` 次数、`Last reset` 原因纳入监控，配合 EEM/SNMP trap 在第一次 flap 就留证据。
+
+---
+
+### 三平台诊断动作对照（背下这张表即可开工）
+
+| 排查动作 | IOS | IOS XR | NX-OS |
+|---------|-----|--------|-------|
+| 会话总览 | `show bgp ipv4 unicast summary` | 同 IOS | 同 IOS |
+| 复位原因 | `show bgp ... neighbors IP` → `Last reset ... due to` | 同 IOS | `Last reset by us / by peer` |
+| 大包探测 | `ping IP size 1472 df-bit` | `ping IP size 1472 do-not-fragment` | `ping IP packet-size 1472 df-bit` |
+| 接口 MTU | `show interfaces X \| include MTU` | `show interfaces X \| include "MTU"` | `show interface X \| include MTU` |
+| 策略默认行为 | 全放行 | **全拒绝（静默）** | 全放行，AF 需 activate |
+| 定时器修改位置 | `address-family` 下 | `neighbor → address-family` 下 | `neighbor → address-family` 下 |
+| 抓 BGP 报文 | SPAN + 外部抓包 | `monitor capture` | `ethanalyzer local interface inband` |
+
+### 小结：四个用例对应的方法论
+
+| 用例 | 用到的排错方法 | 关键判据 |
+|------|--------------|---------|
+| 1. 收到 0 条路由 | 分而治之（TCP → OPEN → UPDATE 逐层切） | 消息数在涨但 PfxRcd 为 0 |
+| 2. 下一跳不可达 | 沿路径追踪 + 配置比较 | `show ip route <下一跳>` 为空 |
+| 3. 大包不通 | 自底向上（MTU 属于数据面） | 1472 通、1473 不通 |
+| 4. 会话 flapping | 时间轴对齐日志 | `Last reset ... due to` |
+
+> 这四类覆盖了 BGP 工单的绝大多数：**收不到、用不了、通不了、稳不住**。第十二章之后的所有专题，都是在这四个骨架上长细节。
+
+---
+
 ## 关键命令速查表
 
 | 命令 | 用途 |
@@ -362,6 +764,8 @@ show logging | include BGP
 8. **debug 是最后手段**，生产上先关 console、开 buffer、限时、用完立刻关
 9. **`clear ip bgp *` 会销毁证据**，除非明确需要重置，否则别动
 10. **配置比较找语义差异**，不要执着于文本相同
+11. **跨厂商第一坑是默认策略不同**：XR 未关联 `route-policy` 时静默丢弃入向、不通告出向；IOS/NX-OS 默认放行，NX-OS 另需显式 `activate`
+12. **四类工单四种判据**：收不到看 `PfxRcd`、用不了看 `show ip route <下一跳>`、通不了测 1472 字节、稳不住看 `Last reset ... due to`
 
 ---
 
