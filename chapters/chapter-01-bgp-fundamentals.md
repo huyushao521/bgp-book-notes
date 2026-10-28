@@ -1,6 +1,6 @@
 # 第 1 章 · BGP 基础
 
-> **本章涵盖**：BGP 消息和路由器间通信；IOS、IOS XR 和 NX-OS 中的 BGP 基本配置；IBGP 规则；EBGP 规则；BGP 路由聚合。
+> **本章涵盖**：BGP 消息和路由器间通信；IOS、IOS XR 和 NX-OS 中的 BGP 基本配置；IBGP 规则；EBGP 规则；BGP 路由聚合；**六个三平台实战用例**。
 
 ---
 
@@ -494,6 +494,741 @@ neighbor 10.1.12.2 local-as 65100 [no-prepend [replace-as [dual-as]]]
 | `no-prepend` | 接收路由时不附加替换 ASN |
 | `no-prepend replace-as` | 收发都不附加，完全模拟原始 AS |
 | `dual-as` | 允许对等体使用任一 ASN 建立会话 |
+
+---
+
+## 1.17 三平台实战用例
+
+> 前 1.1～1.16 的每个知识点，在真实设备上都有一组固定动作。本节把它们串成六个用例：**建会话 → 通告前缀 → 环回建邻 → 汇总 → 团体 → 私有 AS**，每个用例都给出 IOS、IOS XR、NX-OS 三平台的命令、输出与差异点。输出为示意，字段格式与真实设备一致。
+
+### 拓扑
+
+```
+   R1 (IOS, AS 65100) ────── R2 (IOS XR, AS 65200) ────── R3 (NX-OS, AS 65300)
+   Lo0 192.168.1.1/32        Lo0 192.168.2.2/32           Lo0 192.168.3.3/32
+   Gi0/1  10.1.12.1/30       Gi0/0/0/1 10.1.12.2/30       Eth1/1 10.1.23.3/30
+   通告 172.16.1.0/24        Gi0/0/0/2 10.1.23.2/30       接收方
+```
+
+| 设备 | 平台 | AS | 角色 |
+|------|------|-----|------|
+| R1 | IOS | 65100 | 前缀源（172.16.1.0/24） |
+| R2 | IOS XR | 65200 | 中转 AS |
+| R3 | NX-OS | 65300 | 接收方 |
+
+---
+
+### 用例 1：从零建立一条 EBGP 会话（三平台配置 + 状态机逐层验证）
+
+**目标**：R1–R2 之间建立起 EBGP，验证每一个 FSM 阶段都能在命令输出里对上号。
+
+**步骤 1 — 先验证底层可达（不经 BGP）**
+
+```
+! R1 (IOS)
+show ip interface brief | include GigabitEthernet0/1
+GigabitEthernet0/1   10.1.12.1   YES manual up    up
+ping 10.1.12.2 repeat 3
+!!!!!
+Success rate is 100 percent (3/3)
+```
+
+```
+! R2 (IOS XR)
+show ipv4 interface brief
+Interface                  IP-Address      Status                Protocol
+GigabitEthernet0/0/0/1     10.1.12.2       Up                    Up
+ping 10.1.12.1 count 3
+!!!!!
+Success rate is 100 percent (3/3)
+```
+
+> 底层不通就不要配 BGP 了——会话会卡在 `Active`，看起来像 BGP 问题，实际是 ARP/接口/ACL。
+
+**步骤 2 — 三平台配置**
+
+```
+! R1 (IOS)：推荐显式关闭默认激活，配置意图更清晰
+router bgp 65100
+ bgp router-id 192.168.1.1
+ no bgp default ipv4-unicast
+ neighbor 10.1.12.2 remote-as 65200
+ !
+ address-family ipv4
+  neighbor 10.1.12.2 activate
+  network 172.16.1.0 mask 255.255.255.0
+ exit-address-family
+```
+
+```
+! R2 (IOS XR)：EBGP 邻居必须显式关联 route-policy
+route-policy PASS-ALL
+  pass
+end-policy
+!
+router bgp 65200
+ bgp router-id 192.168.2.2
+ address-family ipv4 unicast
+ !
+ neighbor 10.1.12.1
+  remote-as 65100
+  address-family ipv4 unicast
+   route-policy PASS-ALL in
+   route-policy PASS-ALL out
+  !
+ !
+!
+```
+
+```
+! R3 (NX-OS)：邻居与 AF 都要显式写，光配 remote-as 不建立
+router bgp 65300
+  router-id 192.168.3.3
+  address-family ipv4 unicast
+  neighbor 10.1.23.2
+    remote-as 65200
+    address-family ipv4 unicast
+```
+
+**步骤 3 — 用 summary 看会话是否 Established**
+
+```
+! 三平台命令完全一致
+show bgp ipv4 unicast summary
+Neighbor        V    AS MsgRcvd MsgSent   TblVer  InQ OutQ Up/Down  State/PfxRcd
+10.1.12.2       4 65200       9       8        4    0    0 00:00:31          1
+```
+
+**判读**：`State/PfxRcd` 列**要么是数字（Established，数字为收到前缀数），要么是状态名**（Idle/Active/Connect/OpenSent/OpenConfirm）。这是三平台通用的一条铁律，看到文字就说明没建起来。
+
+**步骤 4 — 用 FSM 定位卡在哪一段**
+
+| FSM 状态 | 卡住的含义 | 三平台一致吗 |
+|---------|-----------|------------|
+| `Idle` | BGP 进程未运行 / 邻居被 shutdown / 资源不足 | 一致 |
+| `Connect` | TCP SYN 已发，等 SYN-ACK（路由不可达、端口被 ACL 拦） | 一致 |
+| `Active` | TCP 建不起来（**最常见**：对端没配邻居、对端回 RST、源地址不对、无路由） | 一致 |
+| `OpenSent` | TCP 通了，等对端 OPEN 报文（MTU、防火墙丢包） | 一致 |
+| `OpenConfirm` | 收到 OPEN，等 KEEPALIVE（能力协商异常、认证不匹配） | 一致 |
+| `Established` | 正常，开始交换 UPDATE | 一致 |
+
+**步骤 5 — 典型故障：一端配了、另一端没配 → 永远 `Active`**
+
+```
+! R1 (IOS) 视角
+show bgp ipv4 unicast summary
+10.1.12.2       4 65200       1       0        0    0    0 00:01:12     Active
+
+! 证据一：没有 BGP 对端 TCP 连接
+show tcp brief | include 179
+（无输出）
+
+! 证据二：对端根本没监听/没回
+! 此时应在 R2 上检查是否配置了 neighbor 10.1.12.1
+```
+
+```
+! R2 (IOS XR) 视角，确认自己有没有这个邻居
+show running-config router bgp 65200 neighbor 10.1.12.1
+% No such configuration item(s)
+```
+
+```
+! R3 (NX-OS) 若作为被动侧，同样要显式配置
+show run bgp | include "neighbor 10.1.23.2"
+neighbor 10.1.23.2
+  remote-as 65200
+```
+
+**步骤 6 — 打开 OPEN 报文能力核对（会话建立后）**
+
+```
+! IOS
+show ip bgp neighbors 10.1.12.2 | include "capabilit|Address family|BGP state"
+  BGP state = Established, up for 00:00:31
+  Neighbor capabilities:
+    Route refresh: advertised and received(new)
+    Address family IPv4 Unicast: advertised and received
+    Multisession capability: advertised and received
+```
+
+```
+! IOS XR
+show bgp ipv4 unicast neighbors 10.1.12.1 | include "capabilities|IPv4 Unicast|BGP state"
+  BGP state = Established, up for 00:00:31
+  Neighbor capabilities:
+    IPv4 Unicast: advertised and received
+    Route Refresh: advertised and received
+```
+
+```
+! NX-OS
+show bgp ipv4 unicast neighbors 10.1.23.2 | include "capabilit|IPv4 Unicast|BGP state"
+  BGP state = Established, up for 00:00:28
+  Neighbor capabilities:
+    4 Byte AS: advertised and received
+    Route refresh: advertised and received
+    IPv4 Unicast: advertised
+```
+
+> **跨厂商互通必看这一节**：如果只有一方 `advertised`、另一方没出现 `received`，说明能力协商不一致，紧跟其后的 UPDATE 就会被 NOTIFICATION 打回。四字节 AS 能力（`4 Byte AS`）在 `ASN > 65535` 时必须双方可见。
+
+---
+
+### 用例 2：配了 `network`，对端却收不到前缀
+
+**症状**：R1 上 `network 172.16.1.0 mask 255.255.255.0` 已经敲了，`show bgp ipv4 unicast` 里却查不到这条；或者本地有、对端 `advertised-routes` 为空。
+
+**步骤 1 — 三平台确认"本地到底有没有进 Loc-RIB"**
+
+```
+! IOS
+show bgp ipv4 unicast 172.16.1.0
+% Network not in table
+
+show ip route 172.16.1.0
+% Network not in table          ← 关键：RIB 里根本没有这条精确前缀
+```
+
+```
+! IOS XR（注意：查路由必须带掩码长度）
+show route 172.16.1.0/24
+% Network not found in table
+```
+
+```
+! NX-OS
+show ip route 172.16.1.0/24
+% No matching route
+```
+
+**根因**：`network` 命令是**"把 RIB 中已有的精确前缀搬进 BGP"**，它不创建路由，也不做最长匹配。RIB 里没有 `172.16.1.0/24` 这条精确路由，`network` 就静默失效——**没有任何告警**。
+
+**常见四种写错方式（三平台通用）**
+
+| 错误 | 现象 | 正确做法 |
+|------|------|---------|
+| RIB 只有 `172.16.1.0/25` | `network 172.16.1.0/24` 不生效 | 用 `/25`，或加静态 `Null0` 兜底 |
+| 前缀在 RIB 但是 BGP 学来的 | `network` 无效（不能自己通告自己学来的） | 用 `redistribute` 或 `network` 一个真实来源 |
+| 前缀被 `no auto-summary`/ACL 影响 | 无 | 检查 `distribute-list`/`route-policy` |
+| 对端拒绝 | 本地有、对端 `advertised` 有、对端未接受 | 查对端入向策略（XR 尤其） |
+
+**步骤 2 — 三平台 `network` 语法差异（最容易踩的一条）**
+
+```
+! IOS：network + 点分掩码
+router bgp 65100
+ address-family ipv4
+  network 172.16.1.0 mask 255.255.255.0
+  network 0.0.0.0 mask 0.0.0.0        ! 通告默认路由（另一种写法）
+```
+
+```
+! IOS XR：network + 前缀/长度（CIDR），无 mask 关键字
+router bgp 65200
+ address-family ipv4 unicast
+  network 172.16.1.0/24
+  network 0.0.0.0/0
+```
+
+```
+! NX-OS：同 XR，network + 前缀/长度
+router bgp 65300
+  address-family ipv4 unicast
+    network 172.16.1.0/24
+    network 0.0.0.0/0
+```
+
+**步骤 3 — 补一条静态兜底让前缀"存在"**
+
+```
+! IOS
+ip route 172.16.1.0 255.255.255.0 Null0
+```
+
+```
+! IOS XR
+router static
+ address-family ipv4 unicast
+  172.16.1.0/24 Null0
+ !
+!
+```
+
+```
+! NX-OS（注意 NX-OS 静态路由必须带下一跳或接口，指向 Null0 时用 interface 形式）
+ip route 172.16.1.0/24 Null0
+```
+
+> 兜底路由的副作用：只要这条静态存在，即使真实网络不可达，`/24` 也会持续被通告。生产上应配合 `suppress-map`/`route-policy` 或 IGP 的 S 位跟踪。
+
+**步骤 4 — 验证（三平台一致）**
+
+```
+show bgp ipv4 unicast 172.16.1.0/24                        ! 本地 Loc-RIB 出现该前缀
+show bgp ipv4 unicast neighbors 10.1.12.2 advertised-routes ! 出向确已通告
+show bgp ipv4 unicast neighbors 10.1.12.2 routes            ! 或在对端看接收
+```
+
+---
+
+### 用例 3：把邻居改成环回地址后，会话起不来（多跳 EBGP）
+
+**场景**：R1–R2 之间改成用 Lo0（`192.168.1.1` ↔ `192.168.2.2`）建立 EBGP，便于多链路冗余。改完会话卡在 `Active`。
+
+**步骤 1 — 三平台确认"到对端环回有没有路由"**
+
+```
+! IOS
+show ip route 192.168.2.2
+% Network not in table          ← 没有路由，TCP 连不上，卡 Active
+```
+
+```
+! XR（必须带 /32）
+show route 192.168.2.2/32
+% Network not found in table
+```
+
+```
+! NX-OS
+show ip route 192.168.2.2/32
+% No matching route
+```
+
+**步骤 2 — 三平台补齐两件事：路由 + 源地址 + TTL**
+
+```
+! R1 (IOS)
+ip route 192.168.2.2 255.255.255.255 10.1.12.2
+!
+router bgp 65100
+ neighbor 192.168.2.2 remote-as 65200
+ neighbor 192.168.2.2 update-source Loopback0
+ neighbor 192.168.2.2 ebgp-multihop 3
+```
+
+```
+! R2 (IOS XR)
+router static
+ address-family ipv4 unicast
+  192.168.1.1/32 10.1.12.1
+ !
+!
+router bgp 65200
+ neighbor 192.168.2.2/32                ! XR 邻居可写成 /32
+  remote-as 65100
+  update-source Loopback0              ! update-source 在 neighbor 下，不在 AF 下
+  address-family ipv4 unicast
+   ebgp-multihop 3                     ! 多跳在 AF 下
+   route-policy PASS-ALL in
+   route-policy PASS-ALL out
+  !
+ !
+!
+```
+
+```
+! R3 (NX-OS) 同场景写法
+ip route 192.168.1.1/32 10.1.23.2
+!
+router bgp 65300
+  neighbor 192.168.1.1
+    remote-as 65100
+    update-source loopback0
+    address-family ipv4 unicast
+      ebgp-multihop 3
+```
+
+**三平台写法差异（这一组最容易记混）**
+
+| 配置项 | IOS | IOS XR | NX-OS |
+|--------|-----|--------|-------|
+| 邻居地址形式 | IP | 可写 `IP/32` | IP |
+| `update-source` 位置 | `router bgp` / AF 下 | **`neighbor` 下** | `neighbor` 下 |
+| `ebgp-multihop` 位置 | `router bgp` / AF 下 | **AF 下** | AF 下 |
+| 静态路由指环回 | `ip route A 255.255.255.255 NH` | `router static → AF` | `ip route A/32 NH` |
+
+**步骤 3 — 验证**
+
+```
+show bgp ipv4 unicast summary
+Neighbor        V    AS MsgRcvd MsgSent   TblVer  InQ OutQ Up/Down  State/PfxRcd
+192.168.2.2     4 65200      18      17        6    0    0 00:01:02          1
+
+show tcp brief | include 179
+TCB        Local Address      Foreign Address      (state)
+...        192.168.1.1:179    192.168.2.2:52411    ESTABLISHED   ← 源地址确为 Lo0
+```
+
+> **判据**：`show tcp brief` 的 Local Address 必须是环回地址。若显示物理接口地址，说明 `update-source` 没生效或用错了接口名。
+
+---
+
+### 用例 4：明细转汇总（`aggregate-address` 三平台参数）
+
+**场景**：R1 需要把 `172.16.0.0/24`～`172.16.3.0/24` 四条明细只送一条 `172.16.0.0/22` 给 R2，减少条目。
+
+**步骤 1 — 三平台配置（注意掩码写法差异）**
+
+```
+! IOS：点分掩码 + summary-only + as-set
+router bgp 65100
+ address-family ipv4
+  aggregate-address 172.16.0.0 255.255.252.0 summary-only as-set
+```
+
+```
+! XR：前缀/长度
+router bgp 65200
+ address-family ipv4 unicast
+  aggregate-address 172.16.0.0/22 summary-only as-set
+```
+
+```
+! NX-OS：前缀/长度，需在 AF 下
+router bgp 65300
+  address-family ipv4 unicast
+    aggregate-address 172.16.0.0/22 summary-only as-set
+```
+
+**步骤 2 — 看聚合路由的属性（三平台输出关键字段）**
+
+```
+! IOS
+show bgp ipv4 unicast 172.16.0.0/22
+BGP routing table entry for 172.16.0.0/22, version 20
+Paths: (1 available, best #1, table default)
+  Advertised to update-groups:
+     1
+  65100, (aggregated by 65100 192.168.1.1)
+    0.0.0.0 from 0.0.0.0 (192.168.1.1)
+      Origin IGP, localpref 100, weight 32768, valid, aggregated, local, atomic-aggregate, best
+```
+
+```
+! XR
+show bgp ipv4 unicast 172.16.0.0/22
+BGP routing table entry for 172.16.0.0/22
+  Local
+    0.0.0.0 from 0.0.0.0 (192.168.1.1)
+      Origin IGP, metric 0, localpref 100, valid, aggregated, local, atomic-aggregate, best
+```
+
+```
+! NX-OS
+show bgp ipv4 unicast 172.16.0.0/22
+BGP routing table entry for 172.16.0.0/22, version 5
+Paths: (1 available, best #1)
+  65100, (aggregated by 65100 192.168.1.1)
+    0.0.0.0 from 0.0.0.0 (192.168.1.1)
+      Origin IGP, localpref 100, valid, aggregated, local, atomic-aggregate, best
+```
+
+**三平台一致的三个判据**
+
+| 判据 | 含义 |
+|------|------|
+| 下一跳 `0.0.0.0`、`local` | 聚合路由由本机生成，不指向任何邻居 |
+| `atomic-aggregate` | 原始 AS_PATH/MED/Community 已丢失（属性不完整） |
+| 括号里 `(aggregated by 65100 192.168.1.1)` | 聚合者 ASN 与 router-id |
+| AS_PATH 显示 `65100` 而非 `{65101 65102}` | 未加 `as-set`；加了会显示 `65100 {65101 65102}` |
+
+**步骤 3 — 验证明细是否被抑制**
+
+```
+show bgp ipv4 unicast neighbors 192.168.2.2 advertised-routes
+   Network            Next Hop            Metric LocPrf Weight Path
+*> 172.16.0.0/22      0.0.0.0                  0         32768 65100 i
+（四条 /24 全程不出现，说明 summary-only 生效）
+```
+
+**步骤 4 — 故意踩一个坑：不加 `summary-only` 会怎样**
+
+- 汇总路由与明细**同时**通告，对端按最长匹配走明细，汇总失效
+- 若明细中某条是"黑洞"（静态 Null0 兜底），明细会吸引真实流量
+- 正确姿势：`summary-only`（或 `suppress-map` 精确抑制黑洞明细）
+
+**步骤 5 — 补一条更细的处理：只抑制特定明细**
+
+```
+! IOS
+ip prefix-list PL-BLOCK seq 5 permit 172.16.3.0/24
+route-map RM-SUPPRESS permit 10
+ match ip address prefix-list PL-BLOCK
+router bgp 65100
+ address-family ipv4
+  aggregate-address 172.16.0.0 255.255.252.0 suppress-map RM-SUPPRESS
+```
+
+```
+! XR（用 route-policy 控制聚合属性，抑制仍用 suppress-map）
+route-policy SUPPRESS-3
+  if destination in (172.16.3.0/24) then
+    drop
+  endif
+  pass
+end-policy
+!
+router bgp 65200
+ address-family ipv4 unicast
+  aggregate-address 172.16.0.0/22 suppress-map SUPPRESS-3
+```
+
+```
+! NX-OS
+route-map RM-SUPPRESS permit 10
+  match ip address prefix-list PL-BLOCK
+router bgp 65300
+  address-family ipv4 unicast
+    aggregate-address 172.16.0.0/22 suppress-map RM-SUPPRESS
+```
+
+> **XR 特别提醒**：XR 的 `aggregate-address` 除了 `summary-only`，还可以带 `route-policy` 来改写聚合路由的属性（如设置 community），这是 IOS/NX-OS 没有的能力——IOS 只能用 `advertise-map` 间接实现。
+
+---
+
+### 用例 5：打了 Community 标记，对端看不到
+
+**场景**：R1 想让 `172.16.1.0/24` 携带 `no-export` 传给 R2，R2 侧查不到任何团体信息。
+
+**步骤 1 — 三平台确认团体是否到达**
+
+```
+! IOS / XR / NX-OS 命令形式一致
+show bgp ipv4 unicast 172.16.1.0/24
+! 关注这一行：
+      Community: no-export
+! 若整行缺失 → 团体根本没进 UPDATE
+```
+
+**根因**：**BGP 默认不向外发送 Community 属性**（三平台一致）。只配 `route-map set community` 而不配 `send-community`，本地 `show` 能看到标记，对端永远收不到。
+
+**步骤 2 — 三平台完整配置（标记 + 发送）**
+
+```
+! IOS
+ip community-list standard CL-NOEXP permit no-export
+!
+route-map RM-MARK permit 10
+ set community no-export additive      ! additive 必须写，否则覆盖原有团体
+!
+router bgp 65100
+ address-family ipv4
+  neighbor 10.1.12.2 send-community
+  neighbor 10.1.12.2 route-map RM-MARK out
+```
+
+```
+! IOS XR：命名团体用 community-set，动作在 route-policy 里
+community-set CS-NOEXP
+  no-export
+end-set
+!
+route-policy MARK-NOEXP
+  set community CS-NOEXP additive
+end-policy
+!
+router bgp 65200
+ neighbor 10.1.12.1
+  address-family ipv4 unicast
+   route-policy MARK-NOEXP out
+   send-community-ebgp                 ! XR 的发送开关叫 send-community-ebgp
+  !
+ !
+!
+```
+
+```
+! NX-OS
+ip community-list standard CL-NOEXP permit no-export
+!
+route-map RM-MARK permit 10
+  set community no-export additive
+!
+router bgp 65300
+  neighbor 10.1.23.2
+    address-family ipv4 unicast
+      send-community
+      route-map RM-MARK out
+```
+
+**三平台差异（Community 相关）**
+
+| 配置项 | IOS | IOS XR | NX-OS |
+|--------|-----|--------|-------|
+| 命名团体定义 | `ip community-list standard NAME permit ...` | `community-set NAME` ... `end-set` | `ip community-list standard NAME permit ...` |
+| 发送开关 | `neighbor x send-community` | `send-community-ebgp`（AF 下） | `neighbor x af → send-community` |
+| 设置团体 | `route-map set community ... additive` | `route-policy set community ... additive` | `route-map set community ... additive` |
+| 数字团体格式 | `AA:NN` 或 `AA:NN`（4 字节 AS 需 `ip bgp-community new-format`） | `AA:NN` 直接 | `AA:NN` 直接 |
+
+**步骤 3 — 验证传递了两跳（重点：IBGP 也默认不发）**
+
+```
+show bgp ipv4 unicast 172.16.1.0/24 | include Community
+      Community: no-export
+```
+
+> **常见二次故障**：EBGP 上看到了，IBGP 邻居看不到——因为 `send-community` 是**按邻居**配置的，EBGP 和 IBGP 邻居要分别开。
+
+**步骤 4 — 用团体做策略（三平台匹配写法）**
+
+```
+! IOS
+ip community-list standard CL-100 permit 65100:100
+route-map RM-UP permit 10
+ match community CL-100
+ set local-preference 200
+```
+
+```
+! XR
+community-set CS-100
+  65100:100
+end-set
+route-policy RM-UP
+  if community matches-any CS-100 then
+    set local-preference 200
+  endif
+end-policy
+```
+
+```
+! NX-OS
+ip community-list standard CL-100 permit 65100:100
+route-map RM-UP permit 10
+  match community CL-100
+  set local-preference 200
+```
+
+---
+
+### 用例 6：私有 AS 与双站点（`allowas-in` / `remove-private-as`）
+
+**症状**：AS 65100 的站点 A 和站点 B 通过 ISP（AS 65200）互联，站点 B 收不到站点 A 的路由。
+
+**步骤 1 — 三平台确认"路由到了，但被自己丢掉"**
+
+```
+! 站点 B
+show bgp ipv4 unicast 172.16.1.0/24
+% Network not in table
+
+! 但对端（ISP）确实通告了
+show bgp ipv4 unicast neighbors 10.1.23.2 advertised-routes
+   Network            Next Hop        Metric LocPrf Weight Path
+*> 172.16.1.0/24      10.1.23.2            0             0 65200 65100 i
+                                                              ↑ AS_PATH 里有自己的 AS
+```
+
+**根因**：AS_PATH 环路检测——看到自己的 ASN 就丢弃，这是 BGP 的第一道防环机制。
+
+**步骤 2 — 修复：站点 B 允许自己的 AS 出现（三平台）**
+
+```
+! IOS
+router bgp 65100
+ address-family ipv4
+  neighbor 10.1.23.2 allowas-in
+```
+
+```
+! IOS XR
+router bgp 65100
+ neighbor 10.1.23.2
+  address-family ipv4 unicast
+   allowas-in
+  !
+ !
+!
+```
+
+```
+! NX-OS
+router bgp 65100
+  neighbor 10.1.23.2
+    address-family ipv4 unicast
+      allowas-in
+```
+
+**步骤 3 — 私有 AS 的对称问题：ISP 要给上游剥离**
+
+```
+! ISP 侧（IOS）
+router bgp 65200
+ neighbor 203.0.113.1 remote-as 65300
+ neighbor 203.0.113.1 remove-private-as
+```
+
+```
+! ISP 侧（XR）
+router bgp 65200
+ neighbor 203.0.113.1
+  remote-as 65300
+  address-family ipv4 unicast
+   remove-private-as
+```
+
+```
+! ISP 侧（NX-OS）
+router bgp 65200
+  neighbor 203.0.113.1
+    remote-as 65300
+    address-family ipv4 unicast
+      remove-private-as
+```
+
+**规则回顾（三平台行为一致）**
+
+| 情形 | 是否移除私有 AS |
+|------|----------------|
+| AS_PATH 全是私有 AS | 移除 |
+| 私有 AS 与公有 AS 混杂 | **不移除**（整条路径保留） |
+| 目标是 IBGP 对等体 | 不移除（`remove-private-as` 只作用于 EBGP 出向） |
+
+**步骤 4 — 融合场景：保留旧 ASN（`local-as` 三平台）**
+
+```
+! IOS
+neighbor 10.1.12.2 remote-as 65200
+neighbor 10.1.12.2 local-as 65100 no-prepend replace-as
+
+! IOS XR
+neighbor 10.1.12.2
+ remote-as 65200
+ local-as 65100 no-prepend replace-as
+
+! NX-OS
+neighbor 10.1.12.2
+  remote-as 65200
+  local-as 65100 no-prepend replace-as
+```
+
+**验证**：对端 `show bgp ipv4 unicast 172.16.1.0/24` 看到的 AS_PATH 应为 `65100`（旧 ASN），而不是 `64600 65100`。
+
+---
+
+### 用例与知识点对应表
+
+| 用例 | 验证的基础知识 | 章节 |
+|------|--------------|------|
+| 1. 从零建 EBGP | ASN、OPEN/KEEPALIVE、邻居状态机、基本配置 | 1.1 / 1.3 / 1.4 / 1.5 |
+| 2. `network` 不生效 | 前缀通告规则、Loc-RIB / Adj-RIB-Out | 1.5 |
+| 3. 环回建邻 | EBGP 多跳、update-source、下一跳 | 1.8 |
+| 4. 明细转汇总 | 聚合、Atomic Aggregate、AS_SET、属性抑制 | 1.13 |
+| 5. Community 标记 | 路径属性传递、团体匹配 | 1.2 / 1.12 |
+| 6. 私有 AS 双站点 | AS_PATH 防环、remove-private-as、allowas-in、local-as | 1.1.3 / 1.14-1.16 |
+
+### 六个用例的共同骨架
+
+```
+1. 先验证底层：接口 up、ping 通、有路由        → 排除 L1/L2/L3
+2. 再看 FSM：summary 里是数字还是状态名        → 排除 TCP/OPEN
+3. 再看通告方向：本地有？advertised-routes 有？ → 区分"没生成"和"没发出"
+4. 最后看策略：默认行为 + send-community 开关   → 排除过滤/属性丢失
+```
+
+> 第 1 章的知识点是"零件"，这六个用例是"装法"。零件认不全就会瞎试，只会装不会认，换个场景又不会了——两者必须一起练。
 
 ---
 
