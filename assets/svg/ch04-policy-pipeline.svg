@@ -1,0 +1,165 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 920 560" font-family="-apple-system, 'Segoe UI', 'PingFang SC', 'Microsoft YaHei', sans-serif">
+  <defs>
+    <marker id="arrow-pol" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto">
+      <path d="M0,0 L9,3 L0,6 Z" fill="#57606a"/>
+    </marker>
+  </defs>
+
+  <rect width="920" height="560" fill="#fbfcfd"/>
+
+  <text x="460" y="28" text-anchor="middle" font-size="17" font-weight="700" fill="#1f2328">BGP Policy Processing Pipeline (Three Platforms)</text>
+
+  <!-- Sender side -->
+  <rect x="30" y="55" width="180" height="80" rx="10" fill="#e8f4fd" stroke="#0969da" stroke-width="2"/>
+  <text x="120" y="80" text-anchor="middle" font-size="13" font-weight="700" fill="#0969da">Sender</text>
+  <text x="120" y="98" text-anchor="middle" font-size="10.5" fill="#57606a">Loc-RIB (Best paths)</text>
+  <text x="120" y="113" text-anchor="middle" font-size="10" fill="#6e7781">network / redistribute</text>
+  <text x="120" y="127" text-anchor="middle" font-size="10" fill="#6e7781">aggregate-address</text>
+
+  <!-- Outbound policy -->
+  <rect x="260" y="55" width="200" height="80" rx="10" fill="#fff8e1" stroke="#f9a825" stroke-width="2"/>
+  <text x="360" y="80" text-anchor="middle" font-size="13" font-weight="700" fill="#7a5c00">Outbound Policy</text>
+  <text x="360" y="98" text-anchor="middle" font-size="10" fill="#57606a">IOS/NX: route-map OUT + prefix-list</text>
+  <text x="360" y="113" text-anchor="middle" font-size="10" fill="#57606a">XR: route-policy OUT (mandatory)</text>
+  <text x="360" y="127" text-anchor="middle" font-size="10" fill="#57606a">Attributes: LP, MED, Community, AS-path prepend</text>
+
+  <!-- Adj-RIB-Out -->
+  <rect x="510" y="55" width="160" height="80" rx="10" fill="#f3e5f5" stroke="#7b1fa2" stroke-width="2"/>
+  <text x="590" y="80" text-anchor="middle" font-size="13" font-weight="700" fill="#7b1fa2">Adj-RIB-Out</text>
+  <text x="590" y="98" text-anchor="middle" font-size="10" fill="#57606a">Post-policy NLRI</text>
+  <text x="590" y="113" text-anchor="middle" font-size="10" fill="#6e7781">UPDATE message sent</text>
+  <text x="590" y="127" text-anchor="middle" font-size="10" fill="#6e7781">send-community required</text>
+
+  <!-- TCP 179 -->
+  <rect x="720" y="65" width="170" height="60" rx="10" fill="#e0e0e0" stroke="#616161" stroke-width="2"/>
+  <text x="805" y="90" text-anchor="middle" font-size="13" font-weight="700" fill="#424242">TCP 179</text>
+  <text x="805" y="108" text-anchor="middle" font-size="10" fill="#616161">BGP UPDATE message</text>
+
+  <!-- Arrows for sender -->
+  <line x1="210" y1="95" x2="260" y2="95" stroke="#57606a" stroke-width="2" marker-end="url(#arrow-pol)"/>
+  <line x1="460" y1="95" x2="510" y2="95" stroke="#57606a" stroke-width="2" marker-end="url(#arrow-pol)"/>
+  <line x1="670" y1="95" x2="720" y2="95" stroke="#57606a" stroke-width="2" marker-end="url(#arrow-pol)"/>
+
+  <!-- Divider -->
+  <line x1="460" y1="150" x2="460" y2="180" stroke="#57606a" stroke-width="2" stroke-dasharray="4,4"/>
+  <text x="490" y="170" font-size="10" fill="#6e7781">wire</text>
+
+  <!-- Receiver side -->
+  <rect x="720" y="190" width="170" height="80" rx="10" fill="#e0e0e0" stroke="#616161" stroke-width="2"/>
+  <text x="805" y="215" text-anchor="middle" font-size="13" font-weight="700" fill="#424242">TCP 179</text>
+  <text x="805" y="233" text-anchor="middle" font-size="10" fill="#616161">BGP UPDATE received</text>
+  <text x="805" y="247" text-anchor="middle" font-size="10" fill="#616161">MsgRcvd counter++</text>
+  <text x="805" y="261" text-anchor="middle" font-size="10" fill="#616161">PfxRcd counter++</text>
+
+  <!-- Adj-RIB-In -->
+  <rect x="510" y="190" width="160" height="80" rx="10" fill="#f3e5f5" stroke="#7b1fa2" stroke-width="2"/>
+  <text x="590" y="215" text-anchor="middle" font-size="13" font-weight="700" fill="#7b1fa2">Adj-RIB-In</text>
+  <text x="590" y="233" text-anchor="middle" font-size="10" fill="#57606a">Raw NLRI received</text>
+  <text x="590" y="247" text-anchor="middle" font-size="10" fill="#6e7781">Pre-policy</text>
+  <text x="590" y="261" text-anchor="middle" font-size="10" fill="#6e7781">soft-reconfig inbound</text>
+
+  <!-- Inbound policy -->
+  <rect x="260" y="190" width="200" height="80" rx="10" fill="#fff8e1" stroke="#f9a825" stroke-width="2"/>
+  <text x="360" y="215" text-anchor="middle" font-size="13" font-weight="700" fill="#7a5c00">Inbound Policy</text>
+  <text x="360" y="233" text-anchor="middle" font-size="10" fill="#57606a">IOS/NX: route-map IN + prefix-list</text>
+  <text x="360" y="247" text-anchor="middle" font-size="10" fill="#57606a">XR: route-policy IN (mandatory)</text>
+  <text x="360" y="261" text-anchor="middle" font-size="10" fill="#57606a">Filter: AS-path, prefix, community</text>
+
+  <!-- Loc-RIB (receiver) -->
+  <rect x="30" y="190" width="180" height="80" rx="10" fill="#e8f4fd" stroke="#0969da" stroke-width="2"/>
+  <text x="120" y="215" text-anchor="middle" font-size="13" font-weight="700" fill="#0969da">Loc-RIB</text>
+  <text x="120" y="233" text-anchor="middle" font-size="10" fill="#57606a">Best path selection (13 steps)</text>
+  <text x="120" y="247" text-anchor="middle" font-size="10" fill="#6e7781">Next-hop reachability check</text>
+  <text x="120" y="261" text-anchor="middle" font-size="10" fill="#6e7781">AS_PATH loop detection</text>
+
+  <!-- Arrows for receiver (right to left) -->
+  <line x1="720" y1="230" x2="670" y2="230" stroke="#57606a" stroke-width="2" marker-end="url(#arrow-pol)"/>
+  <line x1="510" y1="230" x2="460" y2="230" stroke="#57606a" stroke-width="2" marker-end="url(#arrow-pol)"/>
+  <line x1="260" y1="230" x2="210" y2="230" stroke="#57606a" stroke-width="2" marker-end="url(#arrow-pol)"/>
+
+  <!-- RIB -->
+  <rect x="30" y="310" width="180" height="55" rx="10" fill="#e8f5e9" stroke="#1a7f37" stroke-width="2"/>
+  <text x="120" y="333" text-anchor="middle" font-size="13" font-weight="700" fill="#1a7f37">Global RIB</text>
+  <text x="120" y="350" text-anchor="middle" font-size="10" fill="#57606a">BGP AD 20 (eBGP) / 200 (iBGP)</text>
+  <line x1="120" y1="270" x2="120" y2="310" stroke="#57606a" stroke-width="2" marker-end="url(#arrow-pol)"/>
+
+  <!-- FIB -->
+  <rect x="30" y="395" width="180" height="50" rx="10" fill="#e8f5e9" stroke="#1a7f37" stroke-width="2"/>
+  <text x="120" y="418" text-anchor="middle" font-size="13" font-weight="700" fill="#1a7f37">FIB / CEF</text>
+  <text x="120" y="435" text-anchor="middle" font-size="10" fill="#57606a">Forwarding plane</text>
+  <line x1="120" y1="365" x2="120" y2="395" stroke="#57606a" stroke-width="2" marker-end="url(#arrow-pol)"/>
+
+  <!-- Platform comparison table -->
+  <rect x="250" y="310" width="640" height="225" rx="8" fill="#f6f8fa" stroke="#d8dee4" stroke-width="1.5"/>
+  <text x="570" y="332" text-anchor="middle" font-size="13" font-weight="700" fill="#1f2328">Three-Platform Policy Behavior Comparison</text>
+
+  <!-- Table header -->
+  <rect x="270" y="342" width="130" height="24" fill="#0969da"/>
+  <text x="335" y="358" text-anchor="middle" font-size="11" font-weight="600" fill="white">Behavior</text>
+  <rect x="400" y="342" width="150" height="24" fill="#0969da"/>
+  <text x="475" y="358" text-anchor="middle" font-size="11" font-weight="600" fill="white">IOS</text>
+  <rect x="550" y="342" width="150" height="24" fill="#0969da"/>
+  <text x="625" y="358" text-anchor="middle" font-size="11" font-weight="600" fill="white">IOS XR</text>
+  <rect x="700" y="342" width="170" height="24" fill="#0969da"/>
+  <text x="785" y="358" text-anchor="middle" font-size="11" font-weight="600" fill="white">NX-OS</text>
+
+  <!-- Row 1 -->
+  <rect x="270" y="366" width="130" height="28" fill="white" stroke="#d8dee4"/>
+  <text x="335" y="383" text-anchor="middle" font-size="10" fill="#1f2328">No policy (inbound)</text>
+  <rect x="400" y="366" width="150" height="28" fill="white" stroke="#d8dee4"/>
+  <text x="475" y="383" text-anchor="middle" font-size="10" fill="#1a7f37">Accept all</text>
+  <rect x="550" y="366" width="150" height="28" fill="white" stroke="#d8dee4"/>
+  <text x="625" y="383" text-anchor="middle" font-size="10" fill="#cf222e" font-weight="600">Drop ALL (silent)</text>
+  <rect x="700" y="366" width="170" height="28" fill="white" stroke="#d8dee4"/>
+  <text x="785" y="383" text-anchor="middle" font-size="10" fill="#1a7f37">Accept all</text>
+
+  <!-- Row 2 -->
+  <rect x="270" y="394" width="130" height="28" fill="#f6f8fa" stroke="#d8dee4"/>
+  <text x="335" y="411" text-anchor="middle" font-size="10" fill="#1f2328">No policy (outbound)</text>
+  <rect x="400" y="394" width="150" height="28" fill="#f6f8fa" stroke="#d8dee4"/>
+  <text x="475" y="411" text-anchor="middle" font-size="10" fill="#1a7f37">Advertise all</text>
+  <rect x="550" y="394" width="150" height="28" fill="#f6f8fa" stroke="#d8dee4"/>
+  <text x="625" y="411" text-anchor="middle" font-size="10" fill="#cf222e" font-weight="600">Advertise NONE</text>
+  <rect x="700" y="394" width="170" height="28" fill="#f6f8fa" stroke="#d8dee4"/>
+  <text x="785" y="411" text-anchor="middle" font-size="10" fill="#1a7f37">Advertise all</text>
+
+  <!-- Row 3 -->
+  <rect x="270" y="422" width="130" height="28" fill="white" stroke="#d8dee4"/>
+  <text x="335" y="439" text-anchor="middle" font-size="10" fill="#1f2328">IPv4 AF activation</text>
+  <rect x="400" y="422" width="150" height="28" fill="white" stroke="#d8dee4"/>
+  <text x="475" y="439" text-anchor="middle" font-size="10" fill="#57606a">Default on</text>
+  <rect x="550" y="422" width="150" height="28" fill="white" stroke="#d8dee4"/>
+  <text x="625" y="439" text-anchor="middle" font-size="10" fill="#57606a">Explicit required</text>
+  <rect x="700" y="422" width="170" height="28" fill="white" stroke="#d8dee4"/>
+  <text x="785" y="439" text-anchor="middle" font-size="10" fill="#57606a">Explicit required</text>
+
+  <!-- Row 4 -->
+  <rect x="270" y="450" width="130" height="28" fill="#f6f8fa" stroke="#d8dee4"/>
+  <text x="335" y="467" text-anchor="middle" font-size="10" fill="#1f2328">Policy syntax</text>
+  <rect x="400" y="450" width="150" height="28" fill="#f6f8fa" stroke="#d8dee4"/>
+  <text x="475" y="467" text-anchor="middle" font-size="10" fill="#57606a">route-map + ACL/pfx</text>
+  <rect x="550" y="450" width="150" height="28" fill="#f6f8fa" stroke="#d8dee4"/>
+  <text x="625" y="467" text-anchor="middle" font-size="10" fill="#57606a">route-policy (RPL)</text>
+  <rect x="700" y="450" width="170" height="28" fill="#f6f8fa" stroke="#d8dee4"/>
+  <text x="785" y="467" text-anchor="middle" font-size="10" fill="#57606a">route-map + ACL/pfx</text>
+
+  <!-- Row 5 -->
+  <rect x="270" y="478" width="130" height="28" fill="white" stroke="#d8dee4"/>
+  <text x="335" y="495" text-anchor="middle" font-size="10" fill="#1f2328">Community default</text>
+  <rect x="400" y="478" width="150" height="28" fill="white" stroke="#d8dee4"/>
+  <text x="475" y="495" text-anchor="middle" font-size="10" fill="#cf222e" font-weight="600">Not sent</text>
+  <rect x="550" y="478" width="150" height="28" fill="white" stroke="#d8dee4"/>
+  <text x="625" y="495" text-anchor="middle" font-size="10" fill="#1a7f37">iBGP: sent</text>
+  <rect x="700" y="478" width="170" height="28" fill="white" stroke="#d8dee4"/>
+  <text x="785" y="495" text-anchor="middle" font-size="10" fill="#cf222e" font-weight="600">Not sent</text>
+
+  <!-- Row 6 -->
+  <rect x="270" y="506" width="130" height="28" fill="#f6f8fa" stroke="#d8dee4"/>
+  <text x="335" y="523" text-anchor="middle" font-size="10" fill="#1f2328">Summary shows error?</text>
+  <rect x="400" y="506" width="150" height="28" fill="#f6f8fa" stroke="#d8dee4"/>
+  <text x="475" y="523" text-anchor="middle" font-size="10" fill="#cf222e" font-weight="600">No</text>
+  <rect x="550" y="506" width="150" height="28" fill="#f6f8fa" stroke="#d8dee4"/>
+  <text x="625" y="523" text-anchor="middle" font-size="10" fill="#cf222e" font-weight="600">No (silent!)</text>
+  <rect x="700" y="506" width="170" height="28" fill="#f6f8fa" stroke="#d8dee4"/>
+  <text x="785" y="523" text-anchor="middle" font-size="10" fill="#cf222e" font-weight="600">No</text>
+</svg>

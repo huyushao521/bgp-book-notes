@@ -1,0 +1,4 @@
+# 临时本地预览页（仅浏览 SVG 用，不入站点）
+preview-svg.html
+*.log
+.DS_Store

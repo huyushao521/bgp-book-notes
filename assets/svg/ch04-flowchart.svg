@@ -1,0 +1,118 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 920 780" font-family="-apple-system, 'Segoe UI', 'PingFang SC', 'Microsoft YaHei', sans-serif">
+  <defs>
+    <linearGradient id="node" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#3b82f6"/><stop offset="1" stop-color="#2563eb"/>
+    </linearGradient>
+    <filter id="card" x="-8%" y="-30%" width="116%" height="170%">
+      <feDropShadow dx="0" dy="1.5" stdDeviation="2.2" flood-color="#0f172a" flood-opacity="0.10"/>
+    </filter>
+    <marker id="mg" markerWidth="8" markerHeight="8" refX="6.5" refY="2.6" orient="auto"><path d="M0,0 L6.5,2.6 L0,5.2 Z" fill="#16a34a"/></marker>
+    <marker id="mr" markerWidth="8" markerHeight="8" refX="6.5" refY="2.6" orient="auto"><path d="M0,0 L6.5,2.6 L0,5.2 Z" fill="#dc2626"/></marker>
+  </defs>
+
+  <rect width="920" height="780" fill="#ffffff"/>
+  <text x="460" y="40" text-anchor="middle" font-size="22" font-weight="700" fill="#0f172a">路由通告 · 六步排错链</text>
+  <text x="460" y="63" text-anchor="middle" font-size="12.5" fill="#64748b">自上而下逐关检查，遇到第一个 ✗ 即为根因</text>
+
+  <!-- 主脊（通过路径） -->
+  <line x1="90" y1="149" x2="90" y2="206" stroke="#16a34a" stroke-width="2.5"/>
+  <line x1="90" y1="244" x2="90" y2="301" stroke="#16a34a" stroke-width="2.5"/>
+  <line x1="90" y1="339" x2="90" y2="396" stroke="#16a34a" stroke-width="2.5"/>
+  <line x1="90" y1="434" x2="90" y2="491" stroke="#16a34a" stroke-width="2.5"/>
+  <line x1="90" y1="529" x2="90" y2="586" stroke="#16a34a" stroke-width="2.5"/>
+  <line x1="90" y1="624" x2="90" y2="666" stroke="#16a34a" stroke-width="2.5" marker-end="url(#mg)"/>
+  <text x="104" y="181" font-size="12" font-weight="700" fill="#16a34a">✓</text>
+  <text x="104" y="276" font-size="12" font-weight="700" fill="#16a34a">✓</text>
+  <text x="104" y="371" font-size="12" font-weight="700" fill="#16a34a">✓</text>
+  <text x="104" y="466" font-size="12" font-weight="700" fill="#16a34a">✓</text>
+  <text x="104" y="561" font-size="12" font-weight="700" fill="#16a34a">✓</text>
+
+  <!-- ============ 步骤行（6 行）============ -->
+  <!-- 1 -->
+  <circle cx="90" cy="130" r="19" fill="url(#node)"/>
+  <text x="90" y="136" text-anchor="middle" font-size="15" font-weight="700" fill="#fff">1</text>
+  <line x1="109" y1="130" x2="130" y2="130" stroke="#cbd5e1" stroke-width="1.4"/>
+  <g filter="url(#card)"><rect x="130" y="99" width="345" height="62" rx="10" fill="#fff" stroke="#e5e7eb" stroke-width="1.3"/></g>
+  <text x="150" y="123" font-size="14.5" font-weight="600" fill="#111827">RIB 中有精确前缀？</text>
+  <text x="150" y="145" font-size="11" font-family="Consolas, 'Cascadia Code', monospace" fill="#6b7280">show ip route &lt;prefix&gt;　/　XR: show route</text>
+  <line x1="477" y1="130" x2="516" y2="130" stroke="#dc2626" stroke-width="1.4" marker-end="url(#mr)"/>
+  <text x="496" y="123" text-anchor="middle" font-size="10.5" font-weight="700" fill="#dc2626">✗</text>
+  <rect x="520" y="102" width="368" height="56" rx="9" fill="#fef2f2" stroke="#fecaca" stroke-width="1.1"/>
+  <text x="536" y="125" font-size="11" font-weight="700" fill="#b91c1c">根因</text>
+  <text x="536" y="143" font-size="11.5" fill="#7f1d1d">前缀不在 RIB · network 静默失效</text>
+
+  <!-- 2 -->
+  <circle cx="90" cy="225" r="19" fill="url(#node)"/>
+  <text x="90" y="231" text-anchor="middle" font-size="15" font-weight="700" fill="#fff">2</text>
+  <line x1="109" y1="225" x2="130" y2="225" stroke="#cbd5e1" stroke-width="1.4"/>
+  <g filter="url(#card)"><rect x="130" y="194" width="345" height="62" rx="10" fill="#fff" stroke="#e5e7eb" stroke-width="1.3"/></g>
+  <text x="150" y="218" font-size="14.5" font-weight="600" fill="#111827">BGP 表中存在该前缀？</text>
+  <text x="150" y="240" font-size="11" font-family="Consolas, 'Cascadia Code', monospace" fill="#6b7280">show bgp ipv4 unicast &lt;prefix&gt;</text>
+  <line x1="477" y1="225" x2="516" y2="225" stroke="#dc2626" stroke-width="1.4" marker-end="url(#mr)"/>
+  <text x="496" y="218" text-anchor="middle" font-size="10.5" font-weight="700" fill="#dc2626">✗</text>
+  <rect x="520" y="197" width="368" height="56" rx="9" fill="#fef2f2" stroke="#fecaca" stroke-width="1.1"/>
+  <text x="536" y="220" font-size="11" font-weight="700" fill="#b91c1c">根因</text>
+  <text x="536" y="238" font-size="11.5" fill="#7f1d1d">掩码格式错 / AF 未激活</text>
+
+  <!-- 3 -->
+  <circle cx="90" cy="320" r="19" fill="url(#node)"/>
+  <text x="90" y="326" text-anchor="middle" font-size="15" font-weight="700" fill="#fff">3</text>
+  <line x1="109" y1="320" x2="130" y2="320" stroke="#cbd5e1" stroke-width="1.4"/>
+  <g filter="url(#card)"><rect x="130" y="289" width="345" height="62" rx="10" fill="#fff" stroke="#e5e7eb" stroke-width="1.3"/></g>
+  <text x="150" y="313" font-size="14.5" font-weight="600" fill="#111827">已选为最优路径（&gt;）？</text>
+  <text x="150" y="335" font-size="11" font-family="Consolas, 'Cascadia Code', monospace" fill="#6b7280">show bgp ... &lt;prefix&gt;　查 &quot;&gt;&quot; 标记</text>
+  <line x1="477" y1="320" x2="516" y2="320" stroke="#dc2626" stroke-width="1.4" marker-end="url(#mr)"/>
+  <text x="496" y="313" text-anchor="middle" font-size="10.5" font-weight="700" fill="#dc2626">✗</text>
+  <rect x="520" y="292" width="368" height="56" rx="9" fill="#fef2f2" stroke="#fecaca" stroke-width="1.1"/>
+  <text x="536" y="315" font-size="11" font-weight="700" fill="#b91c1c">根因</text>
+  <text x="536" y="333" font-size="11.5" fill="#7f1d1d">下一跳不可达（IBGP 常见）</text>
+
+  <!-- 4 -->
+  <circle cx="90" cy="415" r="19" fill="url(#node)"/>
+  <text x="90" y="421" text-anchor="middle" font-size="15" font-weight="700" fill="#fff">4</text>
+  <line x1="109" y1="415" x2="130" y2="415" stroke="#cbd5e1" stroke-width="1.4"/>
+  <g filter="url(#card)"><rect x="130" y="384" width="345" height="62" rx="10" fill="#fff" stroke="#e5e7eb" stroke-width="1.3"/></g>
+  <text x="150" y="408" font-size="14.5" font-weight="600" fill="#111827">已通告给对端？</text>
+  <text x="150" y="430" font-size="11" font-family="Consolas, 'Cascadia Code', monospace" fill="#6b7280">... neighbors IP advertised-routes</text>
+  <line x1="477" y1="415" x2="516" y2="415" stroke="#dc2626" stroke-width="1.4" marker-end="url(#mr)"/>
+  <text x="496" y="408" text-anchor="middle" font-size="10.5" font-weight="700" fill="#dc2626">✗</text>
+  <rect x="520" y="387" width="368" height="56" rx="9" fill="#fef2f2" stroke="#fecaca" stroke-width="1.1"/>
+  <text x="536" y="410" font-size="11" font-weight="700" fill="#b91c1c">根因</text>
+  <text x="536" y="428" font-size="11.5" fill="#7f1d1d">出向策略拦截（XR 缺 route-policy out）</text>
+
+  <!-- 5 -->
+  <circle cx="90" cy="510" r="19" fill="url(#node)"/>
+  <text x="90" y="516" text-anchor="middle" font-size="15" font-weight="700" fill="#fff">5</text>
+  <line x1="109" y1="510" x2="130" y2="510" stroke="#cbd5e1" stroke-width="1.4"/>
+  <g filter="url(#card)"><rect x="130" y="479" width="345" height="62" rx="10" fill="#fff" stroke="#e5e7eb" stroke-width="1.3"/></g>
+  <text x="150" y="503" font-size="14.5" font-weight="600" fill="#111827">对端已接收并接受？</text>
+  <text x="150" y="525" font-size="11" font-family="Consolas, 'Cascadia Code', monospace" fill="#6b7280">对端 ... routes　/　PfxRcd 计数</text>
+  <line x1="477" y1="510" x2="516" y2="510" stroke="#dc2626" stroke-width="1.4" marker-end="url(#mr)"/>
+  <text x="496" y="503" text-anchor="middle" font-size="10.5" font-weight="700" fill="#dc2626">✗</text>
+  <rect x="520" y="482" width="368" height="56" rx="9" fill="#fef2f2" stroke="#fecaca" stroke-width="1.1"/>
+  <text x="536" y="505" font-size="11" font-weight="700" fill="#b91c1c">根因</text>
+  <text x="536" y="523" font-size="11.5" fill="#7f1d1d">入向策略拒绝 / AS_PATH 环路</text>
+
+  <!-- 6 -->
+  <circle cx="90" cy="605" r="19" fill="url(#node)"/>
+  <text x="90" y="611" text-anchor="middle" font-size="15" font-weight="700" fill="#fff">6</text>
+  <line x1="109" y1="605" x2="130" y2="605" stroke="#cbd5e1" stroke-width="1.4"/>
+  <g filter="url(#card)"><rect x="130" y="574" width="345" height="62" rx="10" fill="#fff" stroke="#e5e7eb" stroke-width="1.3"/></g>
+  <text x="150" y="598" font-size="14.5" font-weight="600" fill="#111827">进入对端 RIB 与转发表？</text>
+  <text x="150" y="620" font-size="11" font-family="Consolas, 'Cascadia Code', monospace" fill="#6b7280">show ip route + show ip cef</text>
+  <line x1="477" y1="605" x2="516" y2="605" stroke="#dc2626" stroke-width="1.4" marker-end="url(#mr)"/>
+  <text x="496" y="598" text-anchor="middle" font-size="10.5" font-weight="700" fill="#dc2626">✗</text>
+  <rect x="520" y="577" width="368" height="56" rx="9" fill="#fef2f2" stroke="#fecaca" stroke-width="1.1"/>
+  <text x="536" y="600" font-size="11" font-weight="700" fill="#b91c1c">根因</text>
+  <text x="536" y="618" font-size="11.5" fill="#7f1d1d">管理距离冲突 / CEF 邻接未解析</text>
+
+  <!-- ============ 终态 ============ -->
+  <rect x="130" y="670" width="345" height="52" rx="26" fill="#dcfce7" stroke="#22c55e" stroke-width="1.6"/>
+  <text x="302" y="702" text-anchor="middle" font-size="15" font-weight="700" fill="#15803d">✓ 端到端通告正常 · 六步全通过</text>
+
+  <!-- 图例 -->
+  <line x1="520" y1="690" x2="552" y2="690" stroke="#16a34a" stroke-width="2.5" marker-end="url(#mg)"/>
+  <text x="564" y="694" font-size="11.5" fill="#64748b">通过，继续下一关</text>
+  <line x1="700" y1="690" x2="732" y2="690" stroke="#dc2626" stroke-width="1.6" marker-end="url(#mr)"/>
+  <text x="744" y="694" font-size="11.5" fill="#64748b">失败，定位根因</text>
+</svg>

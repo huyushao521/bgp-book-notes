@@ -1424,4 +1424,4 @@ show bgp ipv4 unicast neighbors 10.1.12.2 | include "Maximum|Threshold"
 
 ---
 
-[← 第 2 章 · 通用的排错方法](chapter-02-troubleshooting-methodology.md) | [← 返回首页](../) | 第 4 章 · 路由通告和 BGP 策略（待精读）
+[← 第 2 章 · 通用的排错方法](chapter-02-troubleshooting-methodology.md) | [← 返回首页](../) | [第 4 章 · 路由通告和 BGP 策略 →](chapter-04-route-advertising-and-policy.md)

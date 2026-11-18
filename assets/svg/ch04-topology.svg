@@ -1,0 +1,147 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 620" font-family="-apple-system, 'Segoe UI', 'PingFang SC', 'Microsoft YaHei', sans-serif">
+  <defs>
+    <!-- Router node (IOS) -->
+    <symbol id="router-ios" viewBox="0 0 120 70">
+      <rect x="8" y="8" width="104" height="54" rx="8" fill="#e8f4fd" stroke="#0969da" stroke-width="2"/>
+      <text x="58" y="26" text-anchor="middle" font-size="13" font-weight="700" fill="#0969da">R1 (IOS)</text>
+      <text x="58" y="42" text-anchor="middle" font-size="10.5" fill="#57606a">AS 65100</text>
+      <text x="58" y="55" text-anchor="middle" font-size="9.5" fill="#6e7781">Lo0: 192.168.1.1</text>
+    </symbol>
+    <!-- Router node (IOS XR) -->
+    <symbol id="router-xr" viewBox="0 0 120 70">
+      <rect x="8" y="8" width="104" height="54" rx="8" fill="#fff4e6" stroke="#cf7a17" stroke-width="2"/>
+      <text x="58" y="26" text-anchor="middle" font-size="13" font-weight="700" fill="#cf7a17">R2 (IOS XR)</text>
+      <text x="58" y="42" text-anchor="middle" font-size="10.5" fill="#57606a">AS 65200</text>
+      <text x="58" y="55" text-anchor="middle" font-size="9.5" fill="#6e7781">Lo0: 192.168.2.2</text>
+    </symbol>
+    <!-- NX-OS node -->
+    <symbol id="router-nxos" viewBox="0 0 120 70">
+      <rect x="8" y="8" width="104" height="54" rx="8" fill="#eef9ed" stroke="#1a7f37" stroke-width="2"/>
+      <text x="58" y="26" text-anchor="middle" font-size="13" font-weight="700" fill="#1a7f37">R3 (NX-OS)</text>
+      <text x="58" y="42" text-anchor="middle" font-size="10.5" fill="#57606a">AS 65200</text>
+      <text x="58" y="55" text-anchor="middle" font-size="9.5" fill="#6e7781">Lo0: 192.168.3.3</text>
+    </symbol>
+    <!-- IOS XR RR node -->
+    <symbol id="router-rr" viewBox="0 0 120 70">
+      <rect x="8" y="8" width="104" height="54" rx="8" fill="#fff4e6" stroke="#cf7a17" stroke-width="2" stroke-dasharray="4,3"/>
+      <text x="58" y="26" text-anchor="middle" font-size="13" font-weight="700" fill="#cf7a17">R5 (IOS XR)</text>
+      <text x="58" y="42" text-anchor="middle" font-size="10.5" fill="#57606a">AS 65200 · RR</text>
+      <text x="58" y="55" text-anchor="middle" font-size="9.5" fill="#6e7781">Lo0: 192.168.5.5</text>
+    </symbol>
+    <!-- IOS node (R4) -->
+    <symbol id="router-ios2" viewBox="0 0 120 70">
+      <rect x="8" y="8" width="104" height="54" rx="8" fill="#e8f4fd" stroke="#0969da" stroke-width="2"/>
+      <text x="58" y="26" text-anchor="middle" font-size="13" font-weight="700" fill="#0969da">R4 (IOS)</text>
+      <text x="58" y="42" text-anchor="middle" font-size="10.5" fill="#57606a">AS 65300</text>
+      <text x="58" y="55" text-anchor="middle" font-size="9.5" fill="#6e7781">Lo0: 192.168.4.4</text>
+    </symbol>
+
+    <!-- Arrow markers -->
+    <marker id="arrow-ebgp" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto">
+      <path d="M0,0 L9,3 L0,6 Z" fill="#cf222e"/>
+    </marker>
+    <marker id="arrow-ibgp" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto">
+      <path d="M0,0 L9,3 L0,6 Z" fill="#0969da"/>
+    </marker>
+  </defs>
+
+  <!-- Background -->
+  <rect width="960" height="620" fill="#fbfcfd"/>
+
+  <!-- Title -->
+  <text x="480" y="28" text-anchor="middle" font-size="18" font-weight="700" fill="#1f2328">Chapter 4 · Route Advertisement &amp; BGP Policy Troubleshooting Topology</text>
+
+  <!-- AS boundaries -->
+  <rect x="20" y="50" width="230" height="540" rx="12" fill="none" stroke="#0969da" stroke-width="1.5" stroke-dasharray="6,4" opacity="0.4"/>
+  <text x="135" y="72" text-anchor="middle" font-size="14" font-weight="700" fill="#0969da" opacity="0.7">AS 65100</text>
+
+  <rect x="300" y="50" width="440" height="540" rx="12" fill="none" stroke="#cf7a17" stroke-width="1.5" stroke-dasharray="6,4" opacity="0.4"/>
+  <text x="520" y="72" text-anchor="middle" font-size="14" font-weight="700" fill="#cf7a17" opacity="0.7">AS 65200 (Transit)</text>
+
+  <rect x="790" y="50" width="150" height="540" rx="12" fill="none" stroke="#1a7f37" stroke-width="1.5" stroke-dasharray="6,4" opacity="0.4"/>
+  <text x="865" y="72" text-anchor="middle" font-size="14" font-weight="700" fill="#1a7f37" opacity="0.7">AS 65300</text>
+
+  <!-- R1 (IOS) - prefix source -->
+  <use href="#router-ios" x="60" y="270" width="120" height="70"/>
+  <text x="120" y="360" text-anchor="middle" font-size="10" fill="#57606a">Prefix source</text>
+  <text x="120" y="372" text-anchor="middle" font-size="10" fill="#57606a">172.16.1.0/24</text>
+
+  <!-- R2 (IOS XR) - ASBR/Edge -->
+  <use href="#router-xr" x="330" y="270" width="120" height="70"/>
+
+  <!-- R3 (NX-OS) - internal, RR client -->
+  <use href="#router-nxos" x="520" y="130" width="120" height="70"/>
+
+  <!-- R5 (IOS XR) - Route Reflector -->
+  <use href="#router-rr" x="520" y="400" width="120" height="70"/>
+  <text x="580" y="490" text-anchor="middle" font-size="10" fill="#cf7a17">Route Reflector</text>
+
+  <!-- R4 (IOS) - downstream receiver -->
+  <use href="#router-ios2" x="810" y="270" width="120" height="70"/>
+  <text x="870" y="360" text-anchor="middle" font-size="10" fill="#57606a">Prefix receiver</text>
+
+  <!-- EBGP link R1 ↔ R2 -->
+  <line x1="180" y1="305" x2="330" y2="305" stroke="#cf222e" stroke-width="2.5"/>
+  <text x="255" y="298" text-anchor="middle" font-size="10" font-weight="600" fill="#cf222e">EBGP</text>
+  <text x="255" y="320" text-anchor="middle" font-size="9" fill="#6e7781">10.1.12.0/30</text>
+
+  <!-- EBGP link R3(R2) ↔ R4 -->
+  <line x1="640" y1="305" x2="810" y2="305" stroke="#cf222e" stroke-width="2.5"/>
+  <text x="725" y="298" text-anchor="middle" font-size="10" font-weight="600" fill="#cf222e">EBGP</text>
+  <text x="725" y="320" text-anchor="middle" font-size="9" fill="#6e7781">10.1.34.0/30</text>
+
+  <!-- IBGP: R2 ↔ R5 (RR) -->
+  <line x1="450" y1="335" x2="520" y2="435" stroke="#0969da" stroke-width="2" stroke-dasharray="5,3"/>
+  <text x="470" y="395" font-size="10" font-weight="600" fill="#0969da">IBGP</text>
+
+  <!-- IBGP: R5 (RR) ↔ R3 -->
+  <line x1="580" y1="400" x2="580" y2="200" stroke="#0969da" stroke-width="2" stroke-dasharray="5,3"/>
+  <text x="595" y="300" font-size="10" font-weight="600" fill="#0969da">IBGP (RR)</text>
+
+  <!-- IBGP: R2 ↔ R3 (Lo0 peering) -->
+  <path d="M 450 280 Q 510 230 540 200" stroke="#0969da" stroke-width="2" stroke-dasharray="5,3" fill="none"/>
+  <text x="510" y="225" font-size="10" font-weight="600" fill="#0969da">IBGP (Lo0)</text>
+
+  <!-- Policy annotations -->
+  <!-- Inbound policy on R2 -->
+  <rect x="200" y="245" width="120" height="22" rx="4" fill="#fff8e1" stroke="#f9a825" stroke-width="1"/>
+  <text x="260" y="260" text-anchor="middle" font-size="9.5" fill="#7a5c00">IN: prefix-list + AS-path</text>
+
+  <!-- Outbound policy on R2 to R3 -->
+  <rect x="460" y="245" width="100" height="22" rx="4" fill="#fff8e1" stroke="#f9a825" stroke-width="1"/>
+  <text x="510" y="260" text-anchor="middle" font-size="9.5" fill="#7a5c00">OUT: route-map</text>
+
+  <!-- Outbound policy on R3 to R4 -->
+  <rect x="660" y="245" width="110" height="22" rx="4" fill="#fff8e1" stroke="#f9a825" stroke-width="1"/>
+  <text x="715" y="260" text-anchor="middle" font-size="9.5" fill="#7a5c00">OUT: route-policy</text>
+
+  <!-- next-hop-self annotation -->
+  <rect x="460" y="340" width="80" height="20" rx="4" fill="#e8f5e9" stroke="#1a7f37" stroke-width="1"/>
+  <text x="500" y="353" text-anchor="middle" font-size="9" fill="#1a7f37">next-hop-self</text>
+
+  <!-- Community annotation -->
+  <rect x="115" y="225" width="100" height="20" rx="4" fill="#f3e5f5" stroke="#7b1fa2" stroke-width="1"/>
+  <text x="165" y="238" text-anchor="middle" font-size="9" fill="#7b1fa2">community: 65100:100</text>
+
+  <!-- Legend -->
+  <rect x="20" y="565" width="350" height="48" rx="6" fill="#f6f8fa" stroke="#d8dee4" stroke-width="1"/>
+  <line x1="40" y1="578" x2="80" y2="578" stroke="#cf222e" stroke-width="2.5"/>
+  <text x="88" y="582" font-size="11" fill="#1f2328">EBGP session</text>
+  <line x1="40" y1="598" x2="80" y2="598" stroke="#0969da" stroke-width="2" stroke-dasharray="5,3"/>
+  <text x="88" y="602" font-size="11" fill="#1f2328">IBGP session (Lo0 / RR)</text>
+  <line x1="210" y1="578" x2="240" y2="578" stroke="#f9a825" stroke-width="1.5"/>
+  <rect x="210" y="573" width="30" height="10" rx="2" fill="#fff8e1"/>
+  <text x="248" y="582" font-size="11" fill="#1f2328">Policy (in/out)</text>
+  <rect x="210" y="593" width="30" height="10" rx="2" fill="#e8f5e9" stroke="#1a7f37" stroke-width="1"/>
+  <text x="248" y="602" font-size="11" fill="#1f2328">next-hop-self</text>
+
+  <!-- Prefix flow indicator -->
+  <path d="M 120 255 Q 200 180 580 165" stroke="#cf222e" stroke-width="1.5" stroke-dasharray="2,4" fill="none" opacity="0.5" marker-end="url(#arrow-ebgp)"/>
+  <text x="300" y="175" font-size="10" fill="#cf222e" opacity="0.6">172.16.1.0/24 advertisement path</text>
+
+  <!-- Device table annotation at bottom right -->
+  <rect x="600" y="565" width="340" height="48" rx="6" fill="#f6f8fa" stroke="#d8dee4" stroke-width="1"/>
+  <text x="615" y="580" font-size="10" font-weight="600" fill="#1f2328">R1 (IOS): Prefix source 172.16.1.0/24</text>
+  <text x="615" y="594" font-size="10" fill="#57606a">R2 (IOS XR): ASBR, transit, next-hop-self</text>
+  <text x="615" y="606" font-size="10" fill="#57606a">R3 (NX-OS): RR client + EBGP to R4 · R5 (XR): Route Reflector</text>
+</svg>
