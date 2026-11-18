@@ -1,0 +1,77 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 500" font-family="-apple-system, 'Segoe UI', 'PingFang SC', 'Microsoft YaHei', sans-serif">
+  <defs>
+    <filter id="ds" x="-10%" y="-10%" width="120%" height="130%">
+      <feDropShadow dx="0" dy="1.5" stdDeviation="2.4" flood-color="#1f2328" flood-opacity="0.14"/>
+    </filter>
+  </defs>
+  <rect width="960" height="500" fill="#fbfcfd"/>
+  <text x="480" y="30" text-anchor="middle" font-size="18" font-weight="700" fill="#1f2328">IBGP 拓扑演进：全互联 → 路由反射器(RR) → 联盟</text>
+
+  <!-- Panel 1: full mesh -->
+  <g stroke="#8bb7dd" stroke-width="2">
+    <line x1="240" y1="105" x2="340" y2="178"/>
+    <line x1="240" y1="105" x2="302" y2="296"/>
+    <line x1="240" y1="105" x2="178" y2="296"/>
+    <line x1="240" y1="105" x2="140" y2="178"/>
+    <line x1="340" y1="178" x2="302" y2="296"/>
+    <line x1="340" y1="178" x2="178" y2="296"/>
+    <line x1="340" y1="178" x2="140" y2="178"/>
+    <line x1="302" y1="296" x2="178" y2="296"/>
+    <line x1="302" y1="296" x2="140" y2="178"/>
+    <line x1="178" y1="296" x2="140" y2="178"/>
+  </g>
+  <g filter="url(#ds)">
+    <circle cx="240" cy="105" r="22" fill="#e8f4fd" stroke="#0969da" stroke-width="2"/>
+    <circle cx="340" cy="178" r="22" fill="#e8f4fd" stroke="#0969da" stroke-width="2"/>
+    <circle cx="302" cy="296" r="22" fill="#e8f4fd" stroke="#0969da" stroke-width="2"/>
+    <circle cx="178" cy="296" r="22" fill="#e8f4fd" stroke="#0969da" stroke-width="2"/>
+    <circle cx="140" cy="178" r="22" fill="#e8f4fd" stroke="#0969da" stroke-width="2"/>
+  </g>
+  <g font-size="11" font-weight="700" fill="#0969da" text-anchor="middle">
+    <text x="240" y="109">R1</text>
+    <text x="340" y="182">R2</text>
+    <text x="302" y="300">R3</text>
+    <text x="178" y="300">R4</text>
+    <text x="140" y="182">R5</text>
+  </g>
+  <text x="240" y="370" text-anchor="middle" font-size="13" font-weight="700" fill="#1f2328">方案一 · iBGP 全互联 mesh</text>
+  <text x="240" y="392" text-anchor="middle" font-size="11.5" fill="#57606a">N×(N-1)/2 条会话 · 5 台=10 条 · 10 台=45 条</text>
+  <text x="240" y="410" text-anchor="middle" font-size="11.5" font-weight="700" fill="#cf222e">连线随规模指数膨胀，不可扩展</text>
+
+  <!-- Panel 2: RR -->
+  <g stroke="#7fd19a" stroke-width="2.5">
+    <line x1="725" y1="205" x2="725" y2="100"/>
+    <line x1="725" y1="205" x2="820" y2="168"/>
+    <line x1="725" y1="205" x2="784" y2="280"/>
+    <line x1="725" y1="205" x2="666" y2="280"/>
+    <line x1="725" y1="205" x2="630" y2="168"/>
+  </g>
+  <g filter="url(#ds)">
+    <circle cx="725" cy="205" r="30" fill="#e6ffe6" stroke="#1a7f37" stroke-width="2.5"/>
+    <circle cx="725" cy="100" r="22" fill="#e8f4fd" stroke="#0969da" stroke-width="2"/>
+    <circle cx="820" cy="168" r="22" fill="#e8f4fd" stroke="#0969da" stroke-width="2"/>
+    <circle cx="784" cy="280" r="22" fill="#e8f4fd" stroke="#0969da" stroke-width="2"/>
+    <circle cx="666" cy="280" r="22" fill="#e8f4fd" stroke="#0969da" stroke-width="2"/>
+    <circle cx="630" cy="168" r="22" fill="#e8f4fd" stroke="#0969da" stroke-width="2"/>
+  </g>
+  <g font-size="11" font-weight="700" fill="#0969da" text-anchor="middle">
+    <text x="725" y="104">R1</text>
+    <text x="820" y="172">R2</text>
+    <text x="784" y="284">R3</text>
+    <text x="666" y="284">R4</text>
+    <text x="630" y="172">R5</text>
+  </g>
+  <text x="725" y="209" text-anchor="middle" font-size="13" font-weight="700" fill="#1a7f37">RR</text>
+  <text x="725" y="370" text-anchor="middle" font-size="13" font-weight="700" fill="#1f2328">方案二 · 路由反射器(RR) 星型</text>
+  <text x="725" y="392" text-anchor="middle" font-size="11.5" fill="#57606a">每台仅 1 条会话到 RR · 可扩展 · RR 需维护 cluster-id 防环</text>
+
+  <!-- Panel 3: confederation -->
+  <rect x="40" y="430" width="400" height="60" rx="10" fill="#f2f6ff" stroke="#0969da" stroke-width="2"/>
+  <text x="240" y="452" text-anchor="middle" font-size="12.5" font-weight="700" fill="#0969da">子 AS 65000-1</text>
+  <text x="240" y="474" text-anchor="middle" font-size="11" fill="#57606a">内部全互联 / RR</text>
+  <rect x="520" y="430" width="400" height="60" rx="10" fill="#f2f6ff" stroke="#0969da" stroke-width="2"/>
+  <text x="720" y="452" text-anchor="middle" font-size="12.5" font-weight="700" fill="#0969da">子 AS 65000-2</text>
+  <text x="720" y="474" text-anchor="middle" font-size="11" fill="#57606a">内部全互联 / RR</text>
+  <text x="480" y="452" text-anchor="middle" font-size="12.5" font-weight="700" fill="#0969da">方案三 · 联盟（Confederation）</text>
+  <text x="480" y="474" text-anchor="middle" font-size="11" fill="#57606a">对外 AS 号一致 · 内部拆子 AS 降低规模</text>
+</svg>

@@ -349,6 +349,8 @@ next-hop-self
 
 ## 1.9-1.10 IBGP 扩展性与路由反射器
 
+![IBGP 拓扑演进：全互联 → 路由反射器 → 联盟](../assets/svg/ch01-bgp-topology.svg)
+
 ### 路由反射器（RR）规则
 
 | 规则 | RR 从…收到 NLRI | 通告给 |
